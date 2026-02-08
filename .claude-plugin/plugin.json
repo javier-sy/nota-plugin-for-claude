@@ -9,5 +9,6 @@
   "homepage": "https://musadsl.yeste.studio",
   "repository": "https://github.com/javier-sy/musa-claude-plugin",
   "license": "GPL-3.0-or-later",
-  "keywords": ["musadsl", "algorithmic-composition", "generative-music", "ruby", "midi", "live-coding"]
+  "keywords": ["musadsl", "algorithmic-composition", "generative-music", "ruby", "midi", "live-coding"],
+  "mcpServers": "./.mcp.json"
 }
