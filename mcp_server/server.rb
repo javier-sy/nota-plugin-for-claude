@@ -209,6 +209,19 @@ end
 
 module MusaKnowledgeBase
   def self.run_server
+    # Ensure knowledge.db exists before accepting tool calls.
+    # Covers: first install, plugin update (new cache dir), hook failure.
+    require_relative "ensure_db"
+    db_path = DB.default_db_path
+    unless File.exist?(db_path)
+      $stderr.puts "[musadsl-kb] knowledge.db not found, downloading..."
+      begin
+        EnsureDB.run(db_path, force: true)
+      rescue => e
+        $stderr.puts "[musadsl-kb] download failed: #{e.message}"
+      end
+    end
+
     server = MCP::Server.new(
       name: "musadsl-kb",
       version: "1.0.0",

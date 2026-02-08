@@ -1,6 +1,6 @@
 {
   "name": "musa-claude-plugin",
-  "version": "0.2.3",
+  "version": "0.2.4",
   "description": "Deep MusaDSL knowledge for algorithmic composition via semantic search over documentation, API, and examples",
   "author": {
     "name": "Javier Sánchez Yeste",

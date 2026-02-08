@@ -26,12 +26,14 @@ module MusaKnowledgeBase
     def db_available?
       return true if File.exist?(db_path)
 
-      # Fallback: attempt to download knowledge.db if the SessionStart hook
-      # didn't run (e.g., plugin was just installed in this session).
-      ensure_db_script = File.join(__dir__, "ensure_db.rb")
-      if File.exist?(ensure_db_script)
-        $stderr.puts "[musadsl-kb] knowledge.db not found, attempting download..."
-        system("ruby", ensure_db_script)
+      # Fallback: attempt to download knowledge.db if the server startup
+      # didn't manage to download it (e.g., network was unavailable then).
+      require_relative "ensure_db"
+      $stderr.puts "[musadsl-kb] knowledge.db not found, attempting download..."
+      begin
+        EnsureDB.run(db_path, force: true)
+      rescue
+        # Graceful degradation
       end
 
       File.exist?(db_path)
