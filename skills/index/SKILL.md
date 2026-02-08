@@ -27,7 +27,7 @@ Guide the user through managing their private composition index — adding, list
    ```bash
    echo $VOYAGE_API_KEY
    ```
-   If empty or unset, tell the user that a Voyage AI API key is required for indexing and redirect them to `/musa-claude-plugin:setup`.
+   If empty or unset, tell the user that a Voyage AI API key is required for indexing and redirect them to `/setup`.
 
 5. **Execute the operation** and present results clearly.
 
@@ -115,4 +115,4 @@ Projects that have neither are skipped.
 
 - **Do NOT search the knowledge base** — this skill manages the index, it doesn't query it. For searching, the user should ask questions normally and the MCP tools will handle it.
 - **Ask for confirmation** before removing works.
-- If the user asks about plugin configuration or API key issues, redirect to `/musa-claude-plugin:setup`.
+- If the user asks about plugin configuration or API key issues, redirect to `/setup`.

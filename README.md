@@ -35,10 +35,10 @@ When you search, the plugin queries both databases and merges results by relevan
 
 | Skill | Purpose |
 |-------|---------|
-| `/musa-claude-plugin:hello` | Welcome, plugin overview, capabilities guide |
-| `/musa-claude-plugin:setup` | Plugin configuration and troubleshooting |
-| `/musa-claude-plugin:explain` | Explain any MusaDSL concept with accurate, sourced answers |
-| `/musa-claude-plugin:index` | Manage private works index (add, list, update, remove compositions) |
+| `/hello` | Welcome, plugin overview, capabilities guide |
+| `/setup` | Plugin configuration and troubleshooting |
+| `/explain` | Explain any MusaDSL concept with accurate, sourced answers |
+| `/index` | Manage private works index (add, list, update, remove compositions) |
 
 ## Installation (end users)
 
@@ -64,13 +64,13 @@ export VOYAGE_API_KEY="your-key-here"
 
 The pre-built knowledge base (`knowledge.db`) is **automatically downloaded** from GitHub Releases on first session start. No additional setup is needed.
 
-Run `/musa-claude-plugin:hello` to get a welcome and capabilities overview, or `/musa-claude-plugin:setup` to verify configuration.
+Say **"hello musa"** to get a welcome and capabilities overview, or run `/setup` to verify configuration.
 
 ### Indexing Private Works
 
 You can index your own composition projects so Claude can reference them during search. Private works are stored in a separate local database (`private.db`) that is never affected by knowledge base updates.
 
-Use `/musa-claude-plugin:index` to manage your private works — add, update, remove, and list indexed compositions. The skill guides you through each operation.
+Use `/index` to manage your private works — add, update, remove, and list indexed compositions. The skill guides you through each operation.
 
 The indexer looks for `musa/` subdirectories (Ruby files) and `README.md` files in each project. Once indexed, your private works appear in `search` (kind: `"all"` or `"private_works"`) and `similar_works` results.
 

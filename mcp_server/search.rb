@@ -11,11 +11,11 @@ module MusaKnowledgeBase
   module Search
     SETUP_HINT =
       "The plugin is not fully configured. " \
-      "Please run /musa-claude-plugin:setup to complete the initial setup."
+      "Please run /setup to complete the initial setup."
 
     VOYAGE_ERROR_HINT =
       "The Voyage AI API key is not working (it may be expired, revoked, or mistyped). " \
-      "Please run /musa-claude-plugin:setup to diagnose the issue."
+      "Please run /setup to diagnose the issue."
 
     module_function
 

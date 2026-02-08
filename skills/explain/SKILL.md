@@ -47,12 +47,12 @@ You are explaining MusaDSL concepts to a user who is composing algorithmic music
 
 ## When MCP tools return setup errors
 
-If MCP tool results mention "not configured", "API key", or "/musa-claude-plugin:setup":
+If MCP tool results mention "not configured", "API key", or "/setup":
 
 1. **Stop immediately** — do NOT try to search for or read local files as a fallback.
    The user may not have the MusaDSL source repositories on their machine.
 2. **Tell the user** that the plugin needs to be configured first.
-3. **Suggest** they run `/musa-claude-plugin:setup` which will guide them through the process.
+3. **Suggest** they run `/setup` which will guide them through the process.
 4. Do NOT attempt to answer the question from general knowledge — wait for the setup to be completed.
 
 ## When MCP tools are not available at all

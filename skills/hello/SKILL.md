@@ -31,14 +31,14 @@ Present a warm welcome and a comprehensive overview of what the plugin provides.
 
    - **`private.db`** (local, optional) — A separate database for the user's own composition projects, stored at `~/.config/musa-claude-plugin/private.db`. This location persists across plugin updates — private content is always safe.
 
-   - Use `/musa-claude-plugin:index` to add your compositions to the private database.
+   - Use `/index` to add your compositions to the private database.
 
 5. **List the available skills:**
 
-   - `/musa-claude-plugin:explain` — Ask about any MusaDSL concept and get an accurate, sourced explanation. Examples: "explain series operations", "how does the sequencer work", "show me neumas syntax"
-   - `/musa-claude-plugin:index` — Manage your private works index (add, update, remove, list compositions)
-   - `/musa-claude-plugin:setup` — Plugin configuration and troubleshooting (API key, knowledge base status)
-   - `/musa-claude-plugin:hello` — This welcome and capabilities overview
+   - `/explain` — Ask about any MusaDSL concept and get an accurate, sourced explanation. Examples: "explain series operations", "how does the sequencer work", "show me neumas syntax"
+   - `/index` — Manage your private works index (add, update, remove, list compositions)
+   - `/setup` — Plugin configuration and troubleshooting (API key, knowledge base status)
+   - `/hello` — This welcome and capabilities overview
 
 6. **List the available MCP tools** (used automatically when answering questions):
 
@@ -54,4 +54,4 @@ Present a warm welcome and a comprehensive overview of what the plugin provides.
 ## Important
 
 - **Do NOT call `check_setup`** or any other MCP tool. This skill is purely informational — it presents the overview from the instructions above.
-- If the user mentions configuration problems, API key issues, or the knowledge base not being found, redirect them to `/musa-claude-plugin:setup` instead.
+- If the user mentions configuration problems, API key issues, or the knowledge base not being found, redirect them to `/setup` instead.

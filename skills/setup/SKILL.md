@@ -49,11 +49,11 @@ Explain that the knowledge base should auto-download on session start. Suggest:
 
 Tell the user that the plugin is fully configured and ready. Then suggest:
 
-- `/musa-claude-plugin:hello` — for a welcome and full overview of the plugin's capabilities
-- `/musa-claude-plugin:explain` — to ask about any MusaDSL concept
-- `/musa-claude-plugin:index` — to manage their private works (add, list, update, remove compositions)
+- `/hello` — for a welcome and full overview of the plugin's capabilities
+- `/explain` — to ask about any MusaDSL concept
+- `/index` — to manage their private works (add, list, update, remove compositions)
 
-If the `check_setup` results show a private works database is present, mention how many chunks it contains. If not present, briefly mention that the user can optionally index their own compositions with `/musa-claude-plugin:index`.
+If the `check_setup` results show a private works database is present, mention how many chunks it contains. If not present, briefly mention that the user can optionally index their own compositions with `/index`.
 
 ## Security
 

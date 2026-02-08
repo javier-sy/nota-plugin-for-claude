@@ -315,7 +315,7 @@ module MusaKnowledgeBase
           puts "  (could not read stats: #{e})"
         end
       else
-        puts "\nPrivate DB: not present (use --add-work, --scan, or /musa-claude-plugin:index to index private works)"
+        puts "\nPrivate DB: not present (use --add-work, --scan, or /index to index private works)"
       end
     end
 

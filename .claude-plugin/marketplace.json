@@ -9,7 +9,7 @@
       "name": "musa-claude-plugin",
       "source": "./",
       "description": "Deep MusaDSL knowledge for algorithmic composition via semantic search over documentation, API, and examples",
-      "version": "0.2.6"
+      "version": "0.2.7"
     }
   ]
 }
