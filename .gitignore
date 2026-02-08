@@ -2,6 +2,7 @@
 mcp_server/knowledge.db
 mcp_server/knowledge.db.version
 mcp_server/knowledge.db.last_check
+mcp_server/private.db
 data/chunks/
 knowledge.db.gz
 vendor/bundle/

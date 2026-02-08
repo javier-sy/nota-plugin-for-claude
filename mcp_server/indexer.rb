@@ -216,7 +216,7 @@ module MusaKnowledgeBase
       end
     end
 
-    def do_status(chunks_dir, db_path)
+    def do_status(chunks_dir, db_path, private_db_path)
       # Check chunks
       manifest_path = File.join(chunks_dir, "manifest.json")
       if File.exist?(manifest_path)
@@ -244,6 +244,22 @@ module MusaKnowledgeBase
         end
       else
         puts "\nKnowledge DB: not built (run --embed)"
+      end
+
+      # Check private DB
+      if File.exist?(private_db_path)
+        puts "\nPrivate DB: present"
+        begin
+          require_relative "db"
+          db = DB.open(private_db_path)
+          stats = DB.collection_stats(db)
+          db.close
+          stats.each { |name, count| puts "  #{name}: #{count} documents" }
+        rescue => e
+          puts "  (could not read stats: #{e})"
+        end
+      else
+        puts "\nPrivate DB: not present (use --add-work or --scan to index private works)"
       end
     end
 
@@ -290,6 +306,7 @@ module MusaKnowledgeBase
       plugin_root = File.dirname(script_dir)
       chunks_dir = options[:chunks_dir] || File.join(plugin_root, "data", "chunks")
       db_path = options[:db_path] || File.join(script_dir, "knowledge.db")
+      private_db_path = options[:db_path] || File.join(script_dir, "private.db")
 
       case options[:command]
       when :chunks_only
@@ -299,11 +316,11 @@ module MusaKnowledgeBase
         abort "Error: --source-root is required for --embed" unless options[:source_root]
         do_embed(options[:source_root], chunks_dir, db_path)
       when :add_work
-        do_add_work(options[:work_path], db_path)
+        do_add_work(options[:work_path], private_db_path)
       when :scan
-        do_scan(options[:scan_dir], db_path)
+        do_scan(options[:scan_dir], private_db_path)
       when :status
-        do_status(chunks_dir, db_path)
+        do_status(chunks_dir, db_path, private_db_path)
       else
         puts parser
         exit 1

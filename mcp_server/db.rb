@@ -28,6 +28,13 @@ module MusaKnowledgeBase
       File.join(__dir__, "knowledge.db")
     end
 
+    def default_private_db_path
+      env_path = ENV["PRIVATE_DB_PATH"]
+      return env_path if env_path
+
+      File.join(__dir__, "private.db")
+    end
+
     def open(path = nil)
       db_path = path || default_db_path
       db = SQLite3::Database.new(db_path)
@@ -139,12 +146,9 @@ module MusaKnowledgeBase
       end
     end
 
-    # Search for similar chunks using KNN, optionally filtering by kind.
-    # Returns formatted markdown string.
-    def search_collections(db, query, kind: "all", n_results: 5, embedder: nil)
-      embedder ||= Voyage.query_embedder
-
-      query_embedding = embedder.embed([query]).first
+    # Low-level KNN search: takes a pre-computed embedding, returns raw result hashes.
+    # Does NOT call Voyage — caller is responsible for embedding the query.
+    def knn_search(db, query_embedding, kind: "all", n_results: 5)
       vec_blob = query_embedding.pack("f*")
 
       # Over-fetch to allow filtering, then trim to n_results
@@ -184,7 +188,17 @@ module MusaKnowledgeBase
         break if all_results.length >= n_results
       end
 
-      format_results(all_results, query)
+      all_results
+    end
+
+    # Search for similar chunks using KNN, optionally filtering by kind.
+    # Returns formatted markdown string. Embeds the query via Voyage AI.
+    def search_collections(db, query, kind: "all", n_results: 5, embedder: nil)
+      embedder ||= Voyage.query_embedder
+
+      query_embedding = embedder.embed([query]).first
+      results = knn_search(db, query_embedding, kind: kind, n_results: n_results)
+      format_results(results, query)
     end
 
     def format_results(results, query)

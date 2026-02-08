@@ -21,8 +21,8 @@ class SearchTool < MCP::Tool
       },
       kind: {
         type: "string",
-        description: 'Filter by content type. Options: "all", "docs", "api", "demo_readme", "demo_code", "gem_readme".',
-        enum: %w[all docs api demo_readme demo_code gem_readme],
+        description: 'Filter by content type. Options: "all", "docs", "api", "demo_readme", "demo_code", "gem_readme", "private_works".',
+        enum: %w[all docs api demo_readme demo_code gem_readme private_works],
         default: "all"
       }
     },
@@ -183,6 +183,22 @@ class CheckSetupTool < MCP::Tool
           stats.each { |name, count| status << "  - #{name}: #{count} chunks" }
         rescue => e
           status << "- **DB error**: #{e.message}"
+        end
+      end
+
+      # Check private DB
+      private_db_path = MusaKnowledgeBase::DB.default_private_db_path
+      has_private_db = File.exist?(private_db_path)
+      status << "- **Private works DB**: #{has_private_db ? 'present' : 'not present (use indexer --add-work to add private compositions)'}"
+
+      if has_private_db
+        begin
+          private_db = MusaKnowledgeBase::DB.open(private_db_path)
+          private_stats = MusaKnowledgeBase::DB.collection_stats(private_db)
+          private_db.close
+          private_stats.each { |name, count| status << "  - #{name}: #{count} chunks" }
+        rescue => e
+          status << "  - **Private DB error**: #{e.message}"
         end
       end
 

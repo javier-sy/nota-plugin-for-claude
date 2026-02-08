@@ -2,7 +2,8 @@
 
 # Search functions backed by sqlite-vec.
 #
-# Falls back gracefully when the database is not yet built.
+# Searches both knowledge.db (public, downloadable) and private.db (local user works).
+# Falls back gracefully when either database is not available.
 
 require_relative "db"
 
@@ -45,7 +46,18 @@ module MusaKnowledgeBase
       error = check_preconditions
       return error if error
 
-      with_db { |db| DB.search_collections(db, query, kind: kind, n_results: 5) }
+      with_dbs do |knowledge_db, private_db|
+        embedding = Voyage.query_embedder.embed([query]).first
+
+        results = DB.knn_search(knowledge_db, embedding, kind: kind, n_results: 5)
+
+        if private_db && %w[all private_works].include?(kind)
+          private_results = DB.knn_search(private_db, embedding, kind: "private_works", n_results: 5)
+          results = (results + private_results).sort_by { |r| r["distance"] }.first(5)
+        end
+
+        DB.format_results(results, query)
+      end
     end
 
     def api_lookup(module_name, method = "")
@@ -53,17 +65,31 @@ module MusaKnowledgeBase
       return error if error
 
       query = "#{module_name} #{method}".strip
-      with_db { |db| DB.search_collections(db, query, kind: "api", n_results: 5) }
+      with_dbs do |knowledge_db, _private_db|
+        embedding = Voyage.query_embedder.embed([query]).first
+        results = DB.knn_search(knowledge_db, embedding, kind: "api", n_results: 5)
+        DB.format_results(results, query)
+      end
     end
 
     def similar_works(description)
       error = check_preconditions
       return error if error
 
-      with_db do |db|
-        results_readme = DB.search_collections(db, description, kind: "demo_readme", n_results: 3)
-        results_code = DB.search_collections(db, description, kind: "demo_code", n_results: 3)
-        "## Demo Descriptions\n#{results_readme}\n\n## Demo Code\n#{results_code}"
+      with_dbs do |knowledge_db, private_db|
+        embedding = Voyage.query_embedder.embed([description]).first
+
+        results_readme = DB.knn_search(knowledge_db, embedding, kind: "demo_readme", n_results: 3)
+        results_code = DB.knn_search(knowledge_db, embedding, kind: "demo_code", n_results: 3)
+
+        if private_db
+          private_results = DB.knn_search(private_db, embedding, kind: "private_works", n_results: 3)
+          results_readme = (results_readme + private_results).sort_by { |r| r["distance"] }.first(3)
+        end
+
+        formatted_readme = DB.format_results(results_readme, description)
+        formatted_code = DB.format_results(results_code, description)
+        "## Demo Descriptions\n#{formatted_readme}\n\n## Demo Code\n#{formatted_code}"
       end
     end
 
@@ -71,10 +97,16 @@ module MusaKnowledgeBase
       error = check_preconditions
       return error if error
 
-      with_db do |db|
-        docs = DB.search_collections(db, "setup requirements for #{concept}", kind: "docs", n_results: 3)
-        code = DB.search_collections(db, "require include #{concept}", kind: "demo_code", n_results: 2)
-        "## Documentation\n#{docs}\n\n## Code Examples\n#{code}"
+      with_dbs do |knowledge_db, _private_db|
+        embedding = Voyage.query_embedder.embed(["setup requirements for #{concept}"]).first
+        docs = DB.knn_search(knowledge_db, embedding, kind: "docs", n_results: 3)
+        formatted_docs = DB.format_results(docs, concept)
+
+        code_embedding = Voyage.query_embedder.embed(["require include #{concept}"]).first
+        code = DB.knn_search(knowledge_db, code_embedding, kind: "demo_code", n_results: 2)
+        formatted_code = DB.format_results(code, concept)
+
+        "## Documentation\n#{formatted_docs}\n\n## Code Examples\n#{formatted_code}"
       end
     end
 
@@ -82,18 +114,24 @@ module MusaKnowledgeBase
       error = check_preconditions
       return error if error
 
-      with_db do |db|
-        code = DB.search_collections(db, technique, kind: "demo_code", n_results: 3)
-        docs = DB.search_collections(db, technique, kind: "docs", n_results: 2)
-        "## Code Examples\n#{code}\n\n## Related Documentation\n#{docs}"
+      with_dbs do |knowledge_db, _private_db|
+        embedding = Voyage.query_embedder.embed([technique]).first
+        code = DB.knn_search(knowledge_db, embedding, kind: "demo_code", n_results: 3)
+        docs = DB.knn_search(knowledge_db, embedding, kind: "docs", n_results: 2)
+        formatted_code = DB.format_results(code, technique)
+        formatted_docs = DB.format_results(docs, technique)
+        "## Code Examples\n#{formatted_code}\n\n## Related Documentation\n#{formatted_docs}"
       end
     end
 
-    # Open DB, yield, close, and catch Voyage AI errors gracefully.
-    def with_db
-      db = DB.open
+    # Open both DBs, yield, close, and catch Voyage AI errors gracefully.
+    # private_db is nil if private.db doesn't exist (it's optional).
+    def with_dbs
+      knowledge_db = DB.open(DB.default_db_path)
+      private_db_path = DB.default_private_db_path
+      private_db = File.exist?(private_db_path) ? DB.open(private_db_path) : nil
       begin
-        yield db
+        yield knowledge_db, private_db
       rescue RuntimeError => e
         if e.message.include?("Voyage AI")
           "[#{VOYAGE_ERROR_HINT}]"
@@ -101,7 +139,8 @@ module MusaKnowledgeBase
           raise
         end
       ensure
-        db.close
+        knowledge_db.close
+        private_db&.close
       end
     end
   end
