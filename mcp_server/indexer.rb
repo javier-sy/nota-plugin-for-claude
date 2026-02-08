@@ -8,6 +8,8 @@
 #   ruby mcp_server/indexer.rb --source-root ../.. --embed
 #   ruby mcp_server/indexer.rb --add-work /path/to/work
 #   ruby mcp_server/indexer.rb --scan /path/to/works
+#   ruby mcp_server/indexer.rb --list-works
+#   ruby mcp_server/indexer.rb --remove-work NAME
 #   ruby mcp_server/indexer.rb --status
 
 require "json"
@@ -216,6 +218,59 @@ module MusaKnowledgeBase
       end
     end
 
+    def do_list_works(private_db_path)
+      require_relative "db"
+
+      unless File.exist?(private_db_path)
+        puts "No private works indexed yet."
+        return
+      end
+
+      db = DB.open(private_db_path)
+      begin
+        works = DB.list_works(db)
+      ensure
+        db.close
+      end
+
+      if works.empty?
+        puts "No private works indexed yet."
+        return
+      end
+
+      puts "Indexed private works:"
+      puts ""
+      puts format("  %-40s %s", "Work", "Chunks")
+      puts "  #{'-' * 40} #{'-' * 6}"
+      works.each do |row|
+        puts format("  %-40s %d", row["work_name"], row["chunk_count"])
+      end
+      puts ""
+      puts "Total: #{works.length} works, #{works.sum { |r| r['chunk_count'] }} chunks"
+    end
+
+    def do_remove_work(work_name, private_db_path)
+      require_relative "db"
+
+      unless File.exist?(private_db_path)
+        puts "No private works indexed yet."
+        return
+      end
+
+      db = DB.open(private_db_path)
+      begin
+        count = DB.remove_work_chunks(db, work_name)
+      ensure
+        db.close
+      end
+
+      if count == 0
+        puts "Work '#{work_name}' not found in index."
+      else
+        puts "Removed #{count} chunks for '#{work_name}'."
+      end
+    end
+
     def do_status(chunks_dir, db_path, private_db_path)
       # Check chunks
       manifest_path = File.join(chunks_dir, "manifest.json")
@@ -259,7 +314,7 @@ module MusaKnowledgeBase
           puts "  (could not read stats: #{e})"
         end
       else
-        puts "\nPrivate DB: not present (use --add-work or --scan to index private works)"
+        puts "\nPrivate DB: not present (use --add-work, --scan, or /musa-claude-plugin:index to index private works)"
       end
     end
 
@@ -295,6 +350,13 @@ module MusaKnowledgeBase
           options[:command] = :scan
           options[:scan_dir] = v
         end
+        opts.on("--list-works", "List all indexed private works") do
+          options[:command] = :list_works
+        end
+        opts.on("--remove-work NAME", "Remove a private work from the index") do |v|
+          options[:command] = :remove_work
+          options[:work_name] = v
+        end
         opts.on("--status", "Show index status") do
           options[:command] = :status
         end
@@ -319,6 +381,10 @@ module MusaKnowledgeBase
         do_add_work(options[:work_path], private_db_path)
       when :scan
         do_scan(options[:scan_dir], private_db_path)
+      when :list_works
+        do_list_works(private_db_path)
+      when :remove_work
+        do_remove_work(options[:work_name], private_db_path)
       when :status
         do_status(chunks_dir, db_path, private_db_path)
       else

@@ -35,8 +35,10 @@ When you search, the plugin queries both databases and merges results by relevan
 
 | Skill | Purpose |
 |-------|---------|
-| `/musa-claude-plugin:setup` | Check plugin status, guided setup, welcome and capabilities overview |
+| `/musa-claude-plugin:hello` | Welcome, plugin overview, capabilities guide |
+| `/musa-claude-plugin:setup` | Plugin configuration and troubleshooting |
 | `/musa-claude-plugin:explain` | Explain any MusaDSL concept with accurate, sourced answers |
+| `/musa-claude-plugin:index` | Manage private works index (add, list, update, remove compositions) |
 
 ## Installation (end users)
 
@@ -62,24 +64,17 @@ export VOYAGE_API_KEY="your-key-here"
 
 The pre-built knowledge base (`knowledge.db`) is **automatically downloaded** from GitHub Releases on first session start. No additional setup is needed.
 
-Run `/musa-claude-plugin:setup` to verify everything is configured correctly and see the full capabilities overview.
+Run `/musa-claude-plugin:hello` to get a welcome and capabilities overview, or `/musa-claude-plugin:setup` to verify configuration.
 
 ### Indexing Private Works
 
 You can index your own composition projects so Claude can reference them during search. Private works are stored in a separate local database (`private.db`) that is never affected by knowledge base updates.
 
-```bash
-# Index a single composition project
-ruby mcp_server/indexer.rb --add-work /path/to/your/composition
-
-# Scan a directory and index all composition projects found
-ruby mcp_server/indexer.rb --scan /path/to/your/works
-
-# Check status of both databases
-ruby mcp_server/indexer.rb --status
-```
+Use `/musa-claude-plugin:index` to manage your private works — add, update, remove, and list indexed compositions. The skill guides you through each operation.
 
 The indexer looks for `musa/` subdirectories (Ruby files) and `README.md` files in each project. Once indexed, your private works appear in `search` (kind: `"all"` or `"private_works"`) and `similar_works` results.
+
+> **For plugin developers:** The skill wraps `mcp_server/indexer.rb`, which supports `--add-work PATH`, `--scan DIR`, `--list-works`, `--remove-work NAME`, and `--status`.
 
 ## Development (plugin maintainers)
 
@@ -123,8 +118,10 @@ The CI only rebuilds `knowledge.db` — it never touches `private.db`, which is 
 musa-claude-plugin/
 ├── .claude-plugin/          # Plugin metadata (plugin.json, marketplace.json)
 ├── skills/
+│   ├── hello/               # /hello skill — welcome and capabilities overview
 │   ├── explain/             # /explain skill — MusaDSL concept explanations
-│   └── setup/               # /setup skill — status check, welcome, guided setup
+│   ├── index/               # /index skill — manage private works index
+│   └── setup/               # /setup skill — configuration and troubleshooting
 ├── rules/                   # Static reference (always in context)
 ├── mcp_server/              # Ruby MCP server + sqlite-vec
 │   ├── server.rb            # MCP tools (6 tools)

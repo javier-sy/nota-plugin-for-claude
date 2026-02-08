@@ -228,5 +228,53 @@ module MusaKnowledgeBase
       end
       stats
     end
+
+    # List private works with chunk counts.
+    # Returns array of hashes: [{"work_name" => "...", "chunk_count" => N}, ...]
+    def list_works(db)
+      db.execute(<<~SQL)
+        SELECT
+          substr(source, 1, instr(source, '/') - 1) AS work_name,
+          COUNT(*) AS chunk_count
+        FROM chunks
+        WHERE kind = 'private_works'
+        GROUP BY work_name
+        ORDER BY work_name
+      SQL
+    end
+
+    # Remove all chunks for a private work (from both chunks and chunks_vec tables).
+    # Returns the number of chunks deleted.
+    def remove_work_chunks(db, work_name)
+      pattern = "#{work_name}/%"
+
+      # Count before deletion for reporting
+      row = db.execute(
+        "SELECT COUNT(*) AS cnt FROM chunks WHERE kind = 'private_works' AND source LIKE ?",
+        [pattern]
+      ).first
+      count = row["cnt"]
+
+      return 0 if count == 0
+
+      db.transaction do
+        # Delete vectors first (referential integrity)
+        db.execute(<<~SQL, [pattern])
+          DELETE FROM chunks_vec
+          WHERE chunk_id IN (
+            SELECT id FROM chunks
+            WHERE kind = 'private_works' AND source LIKE ?
+          )
+        SQL
+
+        # Delete chunk metadata
+        db.execute(
+          "DELETE FROM chunks WHERE kind = 'private_works' AND source LIKE ?",
+          [pattern]
+        )
+      end
+
+      count
+    end
   end
 end
