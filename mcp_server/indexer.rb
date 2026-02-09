@@ -152,13 +152,20 @@ module MusaKnowledgeBase
       end
     end
 
+    # Escape glob-special characters ([] {} ? *) so Dir.glob treats them literally.
+    # Needed because work paths often contain brackets, e.g. "2023-02-12 [musa bw]".
+    def escape_glob(path)
+      path.gsub(/[\[\]{}?*]/) { |c| "\\#{c}" }
+    end
+
     def do_add_work(work_path, db_path)
       require_relative "db"
 
+      escaped = escape_glob(work_path)
       chunks = []
 
       # Index all Ruby files recursively
-      Dir.glob(File.join(work_path, "**/*.rb"))
+      Dir.glob(File.join(escaped, "**/*.rb"))
          .reject { |f| f.include?("/vendor/") || f.include?("/.bundle/") }
          .sort.each do |rb_file|
         rel = Pathname.new(rb_file).relative_path_from(Pathname.new(work_path)).to_s
@@ -172,7 +179,7 @@ module MusaKnowledgeBase
       end
 
       # Index all Markdown files recursively
-      Dir.glob(File.join(work_path, "**/*.md"))
+      Dir.glob(File.join(escaped, "**/*.md"))
          .reject { |f| f.include?("/vendor/") || f.include?("/.bundle/") }
          .sort.each do |md_file|
         rel = Pathname.new(md_file).relative_path_from(Pathname.new(work_path)).to_s
