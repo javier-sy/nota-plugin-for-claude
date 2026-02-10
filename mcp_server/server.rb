@@ -1,7 +1,7 @@
 #!/usr/bin/env ruby
 # frozen_string_literal: true
 
-# MCP server exposing MusaDSL knowledge base tools (14 tools).
+# MCP server exposing MusaDSL knowledge base tools (17 tools).
 
 require "mcp"
 
@@ -336,6 +336,62 @@ class ResetAnalysisFrameworkTool < MCP::Tool
   end
 end
 
+class GetInspirationFrameworkTool < MCP::Tool
+  description(
+    "Get the current inspiration framework used for creative ideation. " \
+    "Returns the framework content and whether it is the default or a user-customized version."
+  )
+
+  class << self
+    def call(server_context:)
+      require_relative "indexer"
+      result = MusaKnowledgeBase::Indexer.get_inspiration_framework
+      text = "**Source**: #{result[:source]}\n\n#{result[:content]}"
+      MCP::Tool::Response.new([{ type: "text", text: text }])
+    end
+  end
+end
+
+class SaveInspirationFrameworkTool < MCP::Tool
+  description(
+    "Save a customized inspiration framework. " \
+    "Replaces the current framework with the provided content."
+  )
+
+  input_schema(
+    properties: {
+      content: {
+        type: "string",
+        description: "The full markdown content of the inspiration framework (with ## sections for each dimension)"
+      }
+    },
+    required: ["content"]
+  )
+
+  class << self
+    def call(content:, server_context:)
+      require_relative "indexer"
+      result = MusaKnowledgeBase::Indexer.save_inspiration_framework(content)
+      MCP::Tool::Response.new([{ type: "text", text: result }])
+    end
+  end
+end
+
+class ResetInspirationFrameworkTool < MCP::Tool
+  description(
+    "Reset the inspiration framework to the default. " \
+    "Removes any user customization."
+  )
+
+  class << self
+    def call(server_context:)
+      require_relative "indexer"
+      result = MusaKnowledgeBase::Indexer.reset_inspiration_framework
+      MCP::Tool::Response.new([{ type: "text", text: result }])
+    end
+  end
+end
+
 class AddAnalysisTool < MCP::Tool
   description(
     "Store a composition analysis in the knowledge base. " \
@@ -389,7 +445,8 @@ module MusaKnowledgeBase
         "for the MusaDSL algorithmic composition framework in Ruby.",
       tools: [SearchTool, ApiReferenceTool, SimilarWorksTool, DependenciesTool, PatternTool, CheckSetupTool,
               ListWorksTool, AddWorkTool, RemoveWorkTool, IndexStatusTool,
-              GetAnalysisFrameworkTool, SaveAnalysisFrameworkTool, ResetAnalysisFrameworkTool, AddAnalysisTool]
+              GetAnalysisFrameworkTool, SaveAnalysisFrameworkTool, ResetAnalysisFrameworkTool, AddAnalysisTool,
+              GetInspirationFrameworkTool, SaveInspirationFrameworkTool, ResetInspirationFrameworkTool]
     )
 
     transport = MCP::Server::Transports::StdioTransport.new(server)

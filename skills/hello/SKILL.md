@@ -49,16 +49,34 @@ Present a warm welcome and a comprehensive overview of what the plugin provides.
 
    The user can customize these dimensions with `/analysis_framework` — adding, removing, or modifying dimensions to fit their analytical interests.
 
-6. **List the available skills:**
+6. **Explain the creative thinking capability:**
+
+   `/think` helps generate ideas for new compositions or explore new directions for existing ones. It uses a configurable **inspiration framework** with 7 default creative dimensions:
+   - Structure — horizontal/vertical organization, proportion, emergence vs. design
+   - Time — pulse, polyrhythm, tempo, duration vocabulary, silence
+   - Pitch — scales, intervals, register, microtonality, pitch series, clusters
+   - Algorithm — Markov, L-systems, genetic algorithms, feedback, control vs. chance
+   - Texture — density, layering, roles, dynamics, timbral evolution
+   - Reference — musical traditions, composers, extra-musical ideas, live coding culture
+   - Constraint — creative limitation as catalyst (pitch, duration, resource, tool restrictions)
+
+   Ideas are always grounded in MusaDSL — each suggestion maps to concrete tools and patterns. The inspiration framework is customizable with `/inspiration_framework`.
+
+   The complete creative cycle: `/think` (generate ideas) -> `/code` (implement) -> `/index` (index the work) -> `/analyze` (analyze it) -> `/think` (new ideas from the analysis).
+
+7. **List the available skills:**
 
    - `/explain` — Ask about any MusaDSL concept and get an accurate, sourced explanation. Examples: "explain series operations", "how does the sequencer work", "show me neumas syntax"
+   - `/code` — Program or modify MusaDSL compositions. Translates musical intentions into working code with API-verified accuracy
+   - `/think` — Generate ideas for compositions. Explores creative dimensions, connects to MusaDSL capabilities, uses WebSearch for external inspiration
    - `/index` — Manage your private works index (add, update, remove, list compositions)
    - `/analyze` — Generate a structured musical analysis of a composition, guided by an analysis framework with multiple analytical dimensions
    - `/analysis_framework` — View, customize, or reset the analytical dimensions used by `/analyze`
+   - `/inspiration_framework` — View, customize, or reset the creative dimensions used by `/think`
    - `/setup` — Plugin configuration and troubleshooting (API key, knowledge base status)
    - `/hello` — This welcome and capabilities overview
 
-7. **List the available MCP tools** (used automatically when answering questions):
+8. **List the available MCP tools** (used automatically when answering questions):
 
    | Tool | What it does |
    |------|-------------|
@@ -76,6 +94,9 @@ Present a warm welcome and a comprehensive overview of what the plugin provides.
    | `save_analysis_framework` | Save a customized analysis framework |
    | `reset_analysis_framework` | Reset the analysis framework to default |
    | `add_analysis` | Store a composition analysis in the knowledge base |
+   | `get_inspiration_framework` | Get the current inspiration framework (default or user-customized) |
+   | `save_inspiration_framework` | Save a customized inspiration framework |
+   | `reset_inspiration_framework` | Reset the inspiration framework to default |
 
 ## Important
 

@@ -25,6 +25,9 @@ module MusaKnowledgeBase
     DEFAULT_FRAMEWORK_PATH = File.join(File.dirname(__dir__), "defaults", "analysis-framework.md")
     USER_FRAMEWORK_PATH = File.join(USER_FRAMEWORK_DIR, "analysis-framework.md")
 
+    DEFAULT_INSPIRATION_PATH = File.join(File.dirname(__dir__), "defaults", "inspiration-framework.md")
+    USER_INSPIRATION_PATH = File.join(USER_FRAMEWORK_DIR, "inspiration-framework.md")
+
     def write_chunks_jsonl(chunks, output_dir)
       FileUtils.mkdir_p(output_dir)
 
@@ -290,6 +293,29 @@ module MusaKnowledgeBase
       end
     end
 
+    def do_get_inspiration_framework
+      if File.exist?(USER_INSPIRATION_PATH)
+        { source: "user", content: File.read(USER_INSPIRATION_PATH, encoding: "utf-8") }
+      else
+        { source: "default", content: File.read(DEFAULT_INSPIRATION_PATH, encoding: "utf-8") }
+      end
+    end
+
+    def do_save_inspiration_framework(content)
+      FileUtils.mkdir_p(USER_FRAMEWORK_DIR)
+      File.write(USER_INSPIRATION_PATH, content, encoding: "utf-8")
+      "Inspiration framework saved to #{USER_INSPIRATION_PATH}"
+    end
+
+    def do_reset_inspiration_framework
+      if File.exist?(USER_INSPIRATION_PATH)
+        File.delete(USER_INSPIRATION_PATH)
+        "Inspiration framework reset to default."
+      else
+        "Inspiration framework is already using the default."
+      end
+    end
+
     def do_add_analysis(work_name, analysis_text, private_db_path)
       require_relative "db"
 
@@ -407,6 +433,18 @@ module MusaKnowledgeBase
 
     def reset_analysis_framework
       do_reset_analysis_framework
+    end
+
+    def get_inspiration_framework
+      do_get_inspiration_framework
+    end
+
+    def save_inspiration_framework(content)
+      do_save_inspiration_framework(content)
+    end
+
+    def reset_inspiration_framework
+      do_reset_inspiration_framework
     end
 
     def add_analysis(work_name, analysis_text)

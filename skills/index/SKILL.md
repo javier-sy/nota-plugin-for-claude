@@ -35,7 +35,7 @@ When the user provides a path to a composition project.
 
 Call the `add_work` MCP tool with the `work_path` parameter (absolute path to the composition project directory).
 
-After success, mention that the work now appears in `search` (kind: `"all"` or `"private_works"`) and `similar_works` results. Suggest using `/analyze` to generate a deeper musical analysis of the work.
+After success, mention that the work now appears in `search` (kind: `"all"` or `"private_works"`) and `similar_works` results. Suggest using `/analyze` to generate a deeper musical analysis of the work, or `/code` to modify the composition.
 
 ### Update a work
 

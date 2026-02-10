@@ -66,6 +66,11 @@ are not available in this session (not listed as tools, not just erroring):
 3. **Never invent** API methods or signatures — if you cannot confirm via the knowledge base,
    explicitly state that.
 
+## Beyond Explanation
+
+- If the user wants to **implement** what they've learned — write code, create a piece, add a voice — suggest `/code`.
+- If the user wants to **explore ideas** — brainstorm, get inspired, think about what to compose — suggest `/think`.
+
 ## Common Pitfalls to Warn About
 
 - Series have NO `.each` method — use `.next_value` or `play` in sequencer

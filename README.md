@@ -1,6 +1,6 @@
 # musa-claude-plugin
 
-Deep MusaDSL knowledge for Claude Code — semantic search over documentation, API reference, and examples, plus structured musical analysis of compositions.
+Deep MusaDSL knowledge for Claude Code — semantic search, composition coding, creative ideation, and structured musical analysis for algorithmic composition.
 
 ## What it does
 
@@ -38,6 +38,9 @@ When you search, the plugin queries both databases and merges results by relevan
 | `save_analysis_framework` | Save a customized analysis framework |
 | `reset_analysis_framework` | Reset the analysis framework to default |
 | `add_analysis` | Store a composition analysis in the knowledge base |
+| `get_inspiration_framework` | Get the current inspiration framework (default or user-customized) |
+| `save_inspiration_framework` | Save a customized inspiration framework |
+| `reset_inspiration_framework` | Reset the inspiration framework to default |
 
 ### Skills
 
@@ -46,9 +49,12 @@ When you search, the plugin queries both databases and merges results by relevan
 | `/hello` | Welcome, plugin overview, capabilities guide |
 | `/setup` | Plugin configuration and troubleshooting |
 | `/explain` | Explain any MusaDSL concept with accurate, sourced answers |
+| `/code` | Program or modify MusaDSL compositions with API-verified accuracy |
+| `/think` | Generate ideas for compositions, explore creative directions |
 | `/index` | Manage private works index (add, list, update, remove compositions) |
 | `/analyze` | Generate a structured musical analysis of a composition |
 | `/analysis_framework` | View, customize, or reset the analysis framework dimensions |
+| `/inspiration_framework` | View, customize, or reset the inspiration framework dimensions |
 
 ## Installation (end users)
 
@@ -96,6 +102,18 @@ The analysis is guided by a configurable **analysis framework** — a set of ana
 
 Removing a work with `/index` also removes its associated analysis.
 
+### Composing with Code
+
+Use `/code` to program new compositions or modify existing ones. The skill translates musical intentions into working MusaDSL Ruby code, verifying every API method against the knowledge base. It proposes an approach before writing, generates complete project structures for new compositions, and warns about common pitfalls. When you describe something musically ("more intense", "like a canon", "more chaotic"), `/code` translates it into concrete technical approaches.
+
+### Creative Thinking
+
+Use `/think` to brainstorm ideas for new compositions or explore new directions. The skill generates ideas across multiple creative dimensions, grounded in what MusaDSL can actually do. It uses WebSearch to connect ideas to composers, techniques, and traditions.
+
+Creative thinking is guided by a configurable **inspiration framework** with 7 default dimensions: Structure, Time, Pitch, Algorithm, Texture, Reference, and Constraint. Use `/inspiration_framework` to customize the dimensions. The inspiration framework is independent from the analysis framework — they serve different purposes and evolve separately.
+
+The complete creative cycle: `/think` (generate ideas) -> `/code` (implement) -> `/index` (index the work) -> `/analyze` (analyze it) -> `/think` (new ideas from the analysis).
+
 ## Development (plugin maintainers)
 
 This section is for contributors who want to modify the plugin itself or rebuild the public knowledge base from source. End users do not need any of this.
@@ -140,15 +158,19 @@ musa-claude-plugin/
 ├── skills/
 │   ├── hello/               # /hello skill — welcome and capabilities overview
 │   ├── explain/             # /explain skill — MusaDSL concept explanations
+│   ├── code/                # /code skill — composition coding and modification
+│   ├── think/               # /think skill — creative ideation and brainstorming
 │   ├── index/               # /index skill — manage private works index
 │   ├── analyze/             # /analyze skill — structured composition analysis
 │   ├── analysis_framework/  # /analysis_framework skill — manage analysis dimensions
+│   ├── inspiration_framework/ # /inspiration_framework skill — manage inspiration dimensions
 │   └── setup/               # /setup skill — configuration and troubleshooting
 ├── defaults/                # Default configuration files
-│   └── analysis-framework.md  # Default analysis framework (8 dimensions)
+│   ├── analysis-framework.md      # Default analysis framework (8 dimensions)
+│   └── inspiration-framework.md   # Default inspiration framework (7 dimensions)
 ├── rules/                   # Static reference (always in context)
 ├── mcp_server/              # Ruby MCP server + sqlite-vec
-│   ├── server.rb            # MCP tools (14 tools)
+│   ├── server.rb            # MCP tools (17 tools)
 │   ├── search.rb            # Dual-DB search (knowledge.db + private.db)
 │   ├── chunker.rb           # Source material → chunks
 │   ├── indexer.rb           # Chunk + embed + store orchestrator
