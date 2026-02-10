@@ -68,6 +68,18 @@ Connect to the broader musical world:
 - **Live coding culture** — Improvisation, performance, real-time decisions. How does the live coding context change what you compose? What about pieces designed to be modified in performance?
 - **Cross-domain** — What would a painting sound like? A building? A recipe? How do you translate non-musical structures into musical ones?
 
+## Dialogue
+
+Contrast with similar and opposite composers to generate new directions:
+
+This dimension requires **analyzing the conversation and ideas discussed** to identify which composers, techniques, and aesthetics are emerging as reference points — then deliberately seeking both affinity and opposition.
+
+- **Similar composers** — Based on the ideas discussed: who works in a similar territory? What specific techniques do they use that you haven't tried? **Use WebSearch to find their works, interviews, scores, or writings.** What can you learn from someone who shares your aesthetic but has different tools or experience?
+- **Opposite composers** — Who represents the polar opposite of the direction you're exploring? If you're working with strict processes, who embraces total improvisation? If you favor density, who composes with silence? **Use WebSearch to explore their approach.** What would happen if you adopted one of their principles into your piece?
+- **Productive tension** — What if you deliberately combined a technique from a similar composer with a principle from an opposite one? Where does the friction between the two generate something new?
+- **Unexpected connections** — Are there composers from entirely different traditions or eras who faced the same compositional problem? A Baroque contrapuntist and an algorithmic composer both deal with rule-governed generation — what can one teach the other?
+- **Provocation from opposition** — What would your opposite composer critique about your approach? What would they do differently with the same MusaDSL tools? Can that critique become a creative starting point?
+
 ## Constraint
 
 Explore creative limitation as catalyst:

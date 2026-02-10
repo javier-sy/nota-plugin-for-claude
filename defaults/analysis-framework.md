@@ -79,3 +79,11 @@ Extract reusable patterns and representative fragments:
 - Highlight notable combinations of series operations
 - Note effective patterns for section chaining, voice management, or generative control
 - Include short representative code fragments (with brief explanation) that capture the essence of the piece's technique
+
+## Conclusion
+
+Synthesize the analysis into a cohesive closing:
+
+- **Key aspects** — Recapitulate the most significant findings across all dimensions. What defines this piece? What are its central ideas, its strongest choices, its distinctive character? Distill the analysis into its essential points.
+- **Aesthetic reading** — Go beyond technical description to interpret the piece musically and aesthetically. What is the compositional intention? What effect does the algorithmic approach produce that a manual approach would not? Where does the piece sit in the tension between process and result, control and emergence, code and music?
+- **Closing** — A brief, considered final statement that captures the essence of the piece as a whole — its identity, its contribution, its place in the composer's practice.

@@ -98,7 +98,7 @@ Beyond indexing code, you can generate structured musical analyses of your compo
 
 Analyses are stored as searchable knowledge in `private.db` (kind: `"analysis"`), so they enrich future searches and `similar_works` results. This transforms search from "what does the code say" to "what does the code do musically."
 
-The analysis is guided by a configurable **analysis framework** — a set of analytical dimensions. Use `/analysis_framework` to view, customize, or reset the dimensions. The default framework covers 8 dimensions including formal structure, harmonic language, rhythmic strategy, generative tools, texture, idiomatic usage, relations to other artists, and notable patterns.
+The analysis is guided by a configurable **analysis framework** — a set of analytical dimensions. Use `/analysis_framework` to view, customize, or reset the dimensions. The default framework covers 9 dimensions including formal structure, harmonic language, rhythmic strategy, generative tools, texture, idiomatic usage, relations to other artists, notable patterns, and a concluding synthesis.
 
 Removing a work with `/index` also removes its associated analysis.
 
@@ -110,7 +110,7 @@ Use `/code` to program new compositions or modify existing ones. The skill trans
 
 Use `/think` to brainstorm ideas for new compositions or explore new directions. The skill generates ideas across multiple creative dimensions, grounded in what MusaDSL can actually do. It uses WebSearch to connect ideas to composers, techniques, and traditions.
 
-Creative thinking is guided by a configurable **inspiration framework** with 7 default dimensions: Structure, Time, Pitch, Algorithm, Texture, Reference, and Constraint. Use `/inspiration_framework` to customize the dimensions. The inspiration framework is independent from the analysis framework — they serve different purposes and evolve separately.
+Creative thinking is guided by a configurable **inspiration framework** with 8 default dimensions: Structure, Time, Pitch, Algorithm, Texture, Reference, Dialogue, and Constraint. Use `/inspiration_framework` to customize the dimensions. The inspiration framework is independent from the analysis framework — they serve different purposes and evolve separately.
 
 The complete creative cycle: `/think` (generate ideas) -> `/code` (implement) -> `/index` (index the work) -> `/analyze` (analyze it) -> `/think` (new ideas from the analysis).
 
@@ -166,8 +166,8 @@ musa-claude-plugin/
 │   ├── inspiration_framework/ # /inspiration_framework skill — manage inspiration dimensions
 │   └── setup/               # /setup skill — configuration and troubleshooting
 ├── defaults/                # Default configuration files
-│   ├── analysis-framework.md      # Default analysis framework (8 dimensions)
-│   └── inspiration-framework.md   # Default inspiration framework (7 dimensions)
+│   ├── analysis-framework.md      # Default analysis framework (9 dimensions)
+│   └── inspiration-framework.md   # Default inspiration framework (8 dimensions)
 ├── rules/                   # Static reference (always in context)
 ├── mcp_server/              # Ruby MCP server + sqlite-vec
 │   ├── server.rb            # MCP tools (17 tools)

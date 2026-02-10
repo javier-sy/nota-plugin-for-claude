@@ -37,7 +37,7 @@ Present a warm welcome and a comprehensive overview of what the plugin provides.
 
    The plugin can generate structured musical analyses of compositions. `/analyze` reads the actual source code, interprets it musically, and produces a detailed analysis covering multiple analytical dimensions. The analysis is then stored as searchable knowledge in `private.db`, enriching future searches.
 
-   The analysis is guided by a configurable **analysis framework** with 8 default dimensions:
+   The analysis is guided by a configurable **analysis framework** with 9 default dimensions:
    - Formal Structure — sections, chaining, form, proportions
    - Harmonic and Modal Language — scales, modes, modulations
    - Rhythmic and Temporal Strategy — durations, polyrhythms, clock/transport
@@ -46,18 +46,20 @@ Present a warm welcome and a comprehensive overview of what the plugin provides.
    - Idiomatic Usage and Special Features — creative uses of MusaDSL
    - Relation to Other Artists — connections to composers and traditions (with WebSearch)
    - Notable Technical Patterns — reusable idioms and representative fragments
+   - Conclusion — key aspects recapitulation, aesthetic reading, closing statement
 
    The user can customize these dimensions with `/analysis_framework` — adding, removing, or modifying dimensions to fit their analytical interests.
 
 6. **Explain the creative thinking capability:**
 
-   `/think` helps generate ideas for new compositions or explore new directions for existing ones. It uses a configurable **inspiration framework** with 7 default creative dimensions:
+   `/think` helps generate ideas for new compositions or explore new directions for existing ones. It uses a configurable **inspiration framework** with 8 default creative dimensions:
    - Structure — horizontal/vertical organization, proportion, emergence vs. design
    - Time — pulse, polyrhythm, tempo, duration vocabulary, silence
    - Pitch — scales, intervals, register, microtonality, pitch series, clusters
    - Algorithm — Markov, L-systems, genetic algorithms, feedback, control vs. chance
    - Texture — density, layering, roles, dynamics, timbral evolution
    - Reference — musical traditions, composers, extra-musical ideas, live coding culture
+   - Dialogue — contrast with similar and opposite composers to generate new directions (with WebSearch)
    - Constraint — creative limitation as catalyst (pitch, duration, resource, tool restrictions)
 
    Ideas are always grounded in MusaDSL — each suggestion maps to concrete tools and patterns. The inspiration framework is customizable with `/inspiration_framework`.

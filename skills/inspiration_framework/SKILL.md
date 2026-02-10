@@ -53,7 +53,7 @@ When the user wants to go back to the default framework.
 ## Important
 
 - The framework is a markdown file with `##` sections. Each section title names a creative dimension; the section body provides provocations and questions to guide ideation.
-- The default framework has 7 dimensions: Structure, Time, Pitch, Algorithm, Texture, Reference, Constraint.
+- The default framework has 8 dimensions: Structure, Time, Pitch, Algorithm, Texture, Reference, Dialogue, Constraint.
 - The tone is provocative — questions ("What if...?"), possibilities, explorations — not instructions or checklists.
 - User customizations are stored at `~/.config/musa-claude-plugin/inspiration-framework.md`.
 - Changes to the framework affect future `/think` sessions but do not retroactively change anything (ideation is ephemeral).

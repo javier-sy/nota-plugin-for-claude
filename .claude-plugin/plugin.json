@@ -1,6 +1,6 @@
 {
   "name": "musa-claude-plugin",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "description": "Deep MusaDSL knowledge for algorithmic composition — semantic search, composition coding, creative ideation, and structured musical analysis",
   "author": {
     "name": "Javier Sánchez Yeste",
