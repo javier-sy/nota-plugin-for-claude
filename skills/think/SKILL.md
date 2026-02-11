@@ -5,8 +5,8 @@ description: >-
   explore creative directions, get inspiration, think about what to compose,
   discuss musical possibilities, or is stuck and wants to explore options.
   Also when they say "think", "brainstorm", "ideas", "inspire", "what if",
-  "what could I", "I'm stuck", "explore", etc.
-version: 0.1.0
+  "what could I", "I'm stuck", "explore", review the think journal, etc.
+version: 0.2.0
 ---
 
 # MusaDSL Creative Thinking
@@ -17,39 +17,57 @@ Help the user generate ideas for algorithmic compositions. Expand the creative s
 
 1. **Detect the user's language** from their message. If they write in Spanish, respond entirely in Spanish. If in English, respond in English. Match whatever language they use.
 
-2. **Understand the context** — what is the user's starting point?
+2. **Load the think journal** — read `think-journal.md` from the root of the current musical project (if it exists). This is the persistent creative memory for this composition. Review it to understand:
+   - What ideas are currently active (Active Threads)
+   - What has already been explored or implemented (Explored)
+   - What decisions have been made (Decisions)
+   - What was discarded and why (Discarded)
+   - What questions remain open (Open Questions)
+
+3. **Present the creative state** — if the journal has content, start by briefly summarizing open threads and questions before generating new ideas. This gives the user continuity: "Last time you were exploring X, Y remains open, you decided Z..."
+
+4. **Understand the context** — what is the user's starting point?
    - **New piece from scratch** — no existing material, open exploration
    - **Variation on existing work** — has a piece, wants to take it in a new direction
    - **Stuck / blocked** — has started something but doesn't know how to continue
    - **Exploring a direction** — has a vague idea, wants to develop it
    - **Reviewing their practice** — wants to reflect on patterns across their works
+   - **Resuming previous thinking** — wants to pick up an active thread from the journal
 
-3. **If working from an existing composition**: read the code from the filesystem and/or search for previous analyses with `search(kind: "analysis")` to understand what the user has already done.
+5. **If working from an existing composition**: read the code from the filesystem and/or search for previous analyses with `search(kind: "analysis")` to understand what the user has already done.
 
-4. **If the user has previous analyses**: search with `search(kind: "analysis")` to detect patterns in their practice — recurring techniques, preferred tools, aesthetic tendencies — and use this to suggest new, unexplored directions.
+6. **If the user has previous analyses**: search with `search(kind: "analysis")` to detect patterns in their practice — recurring techniques, preferred tools, aesthetic tendencies — and use this to suggest new, unexplored directions.
 
-5. **Read the inspiration framework** by calling the `get_inspiration_framework` MCP tool. Use its dimensions as lenses to generate ideas.
+7. **Read the inspiration framework** by calling the `get_inspiration_framework` MCP tool. Use its dimensions as lenses to generate ideas.
 
-6. **Generate ideas across the framework dimensions** — present them as provocations and possibilities, not prescriptions:
+8. **Generate ideas across the framework dimensions** — present them as provocations and possibilities, not prescriptions:
    - For each relevant dimension, offer 2-3 concrete ideas
    - Frame them as questions: "What if...?", "What happens when...?", "Consider..."
    - Don't cover all dimensions mechanically — focus on the ones most relevant to the user's context
+   - Avoid repeating ideas already explored or discarded in the journal
 
-7. **Verify BEFORE showing** — for every idea that references MusaDSL tools, classes, methods, or patterns:
+9. **Verify BEFORE showing** — for every idea that references MusaDSL tools, classes, methods, or patterns:
    - Call `search` and/or `api_reference` to confirm the classes, methods, and parameters actually exist
    - Call `pattern` to retrieve working code patterns for the technique
    - **Only after verification**, include the technical mapping in the idea
    - If you cannot verify something, describe the idea conceptually (musical intention, aesthetic direction) WITHOUT code. Never show a code snippet that hasn't been checked against the knowledge base.
 
-8. **For each verified idea, sketch the technical mapping** — briefly indicate:
-   - Which MusaDSL tools would be involved (naming only verified classes and methods)
-   - What pattern or structure would be used (based on actual `pattern` results or knowledge base examples)
-   - A rough sense of complexity (simple experiment vs. full composition)
-   - If you include a code fragment, it MUST come from or be closely based on verified knowledge base results — never invent method signatures, parameter names, or class hierarchies
+10. **For each verified idea, sketch the technical mapping** — briefly indicate:
+    - Which MusaDSL tools would be involved (naming only verified classes and methods)
+    - What pattern or structure would be used (based on actual `pattern` results or knowledge base examples)
+    - A rough sense of complexity (simple experiment vs. full composition)
+    - If you include a code fragment, it MUST come from or be closely based on verified knowledge base results — never invent method signatures, parameter names, or class hierarchies
 
-9. **Use WebSearch for external inspiration** — search for composers, techniques, movements, or concepts that connect to the ideas. Provide accurate context and citations.
+11. **Use WebSearch for external inspiration** — search for composers, techniques, movements, or concepts that connect to the ideas. Provide accurate context and citations.
 
-10. **Present organized options** — let the user choose which direction interests them. Don't push a single direction.
+12. **Present organized options** — let the user choose which direction interests them. Don't push a single direction.
+
+13. **Update the think journal** — after generating ideas or discussing directions, update `think-journal.md` with:
+    - New ideas added to Active Threads
+    - Ideas the user chose to explore moved or annotated
+    - Decisions captured in Decisions
+    - Rejected directions moved to Discarded with reasoning
+    - New open questions recorded
 
 ## Ideation Modes
 
@@ -88,7 +106,7 @@ If MCP tool results mention "not configured", "API key", or "/setup":
 
 ## Important
 
-- **Output is ephemeral** — this skill does not persist anything. The user takes what they want from the conversation.
+- **The think journal is the persistent output** — creative thinking is persisted to `think-journal.md` via the think-journal rule. This skill explicitly updates the journal as step 13.
 - **When the user is ready to implement**, suggest `/code` to move from ideas to working code.
 - **Tone is provocative and open** — questions, possibilities, "what if" — not directives.
 - **Don't be exhaustive** — better to offer 5 vivid ideas than 20 generic ones. Quality over quantity.

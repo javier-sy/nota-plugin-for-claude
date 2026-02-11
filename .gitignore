@@ -1,3 +1,4 @@
+.DS_Store
 .idea/
 mcp_server/knowledge.db
 mcp_server/knowledge.db.version
