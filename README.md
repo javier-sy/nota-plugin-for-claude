@@ -49,7 +49,7 @@ Generates ideas for new compositions or explores new directions for existing one
 - **MusaDSL knowledge** — to ensure every idea maps to concrete, implementable tools and patterns
 - **WebSearch** — to connect ideas to composers, techniques, and traditions with accurate references
 
-The default **inspiration framework** has 8 dimensions: Structure, Time, Pitch, Algorithm, Texture, Reference, Dialogue, and Constraint. Customize them with `/inspiration_framework`.
+The default **inspiration framework** has 9 dimensions: Structure, Time, Pitch, Algorithm, Texture, Instrumentation, Reference, Dialogue, and Constraint. Customize them with `/inspiration_framework`.
 
 ### `/code` — Composition coding
 
@@ -186,7 +186,7 @@ nota/
 │   └── setup/               # /setup skill — configuration and troubleshooting
 ├── defaults/                # Default configuration files
 │   ├── analysis-framework.md      # Default analysis framework (9 dimensions)
-│   └── inspiration-framework.md   # Default inspiration framework (8 dimensions)
+│   └── inspiration-framework.md   # Default inspiration framework (9 dimensions)
 ├── rules/                   # Static reference (always in context)
 ├── mcp_server/              # Ruby MCP server + sqlite-vec
 │   ├── server.rb            # MCP tools (17 tools)

@@ -58,6 +58,18 @@ Explore the sonic surface:
 - **MIDI parameters** — Beyond notes: velocity curves, CC messages, program changes, aftertouch. What sonic possibilities do these open?
 - **Timbral evolution** — Even with fixed instruments, timbre changes through register, density, velocity, articulation. How does the sonic color evolve?
 
+## Instrumentation
+
+Explore writing for specific instruments and ensembles:
+
+- **Instrumental identity** — Each instrument has a character: range, agility, resonance, attack. What if you write *for* the instrument instead of writing abstract notes? How do you encode idiomatic writing (string crossings, breathing, pedaling) in MusaDSL?
+- **Range and tessitura** — Where does each instrument sound best? What happens at its extremes? What if you systematically explore the registers each instrument avoids?
+- **Ensemble interaction** — How do instruments relate? Unison, call-and-response, hocket, doubling, shadowing, opposition. What happens when algorithmically generated material is distributed across an ensemble?
+- **Orchestration as composition** — What if the orchestration *is* the composition? Same pitch material, radically different instrumentation. What does timbre redistribution reveal?
+- **MIDI mapping** — Channels as instruments, velocity as articulation, CC as expression. How do you map instrumental thinking to MIDI reality? What about multi-timbral setups where one algorithm feeds different instruments?
+- **Virtual vs. physical** — Writing for software synths (infinite range, any timbre) vs. real instruments (human limits, physical effort). How does the target instrument change the algorithm?
+- **Reduction and expansion** — A piece for one instrument expanded to ensemble. An ensemble piece reduced to solo. What survives the transformation?
+
 ## Reference
 
 Connect to the broader musical world:

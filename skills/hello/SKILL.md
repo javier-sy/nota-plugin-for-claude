@@ -28,7 +28,7 @@ Present a warm welcome and a comprehensive overview of what the plugin provides.
    **`/explain`** — Semantic search. Ask about any MusaDSL concept and get an accurate, sourced answer. Retrieves relevant documentation, API details, and code examples from the knowledge base.
 
    **`/think`** — Creative thinking. Generates ideas for new compositions or explores new directions for existing ones, drawing from:
-   - The **inspiration framework** — 8 configurable creative dimensions: Structure, Time, Pitch, Algorithm, Texture, Reference, Dialogue, and Constraint
+   - The **inspiration framework** — 9 configurable creative dimensions: Structure, Time, Pitch, Algorithm, Texture, Instrumentation, Reference, Dialogue, and Constraint
    - The user's **previous analyses** — to detect patterns in their practice and suggest unexplored directions
    - **MusaDSL knowledge** — to ensure every idea maps to concrete, implementable tools and patterns
    - **WebSearch** — to connect ideas to composers, techniques, and traditions
