@@ -22,7 +22,7 @@ class SearchTool < MCP::Tool
       kind: {
         type: "string",
         description: 'Filter by content type. Options: "all", "docs", "api", "demo_readme", "demo_code", "gem_readme", "private_works", "analysis".',
-        enum: %w[all docs api demo_readme demo_code gem_readme private_works analysis],
+        enum: %w[all docs api demo_readme demo_code gem_readme private_works analysis best_practice],
         default: "all"
       }
     },
@@ -421,6 +421,119 @@ class AddAnalysisTool < MCP::Tool
   end
 end
 
+class SaveBestPracticeTool < MCP::Tool
+  description(
+    "Save a best practice to the knowledge base. " \
+    "Writes a markdown file and indexes it for semantic search."
+  )
+
+  input_schema(
+    properties: {
+      name: {
+        type: "string",
+        description: 'Slug-style name for the practice (e.g. "shutdown-pattern", "seed-reproducibility")'
+      },
+      content: {
+        type: "string",
+        description: "Full markdown content of the best practice (with # title, ## Description, ## Example, optional ## Anti-pattern)"
+      },
+      scope: {
+        type: "string",
+        description: 'Where to save: "private" (user, ~/.config/nota/best-practices/) or "global" (plugin, data/best-practices/). Default: "private".',
+        enum: %w[private global],
+        default: "private"
+      }
+    },
+    required: %w[name content]
+  )
+
+  class << self
+    def call(name:, content:, scope: "private", server_context:)
+      require_relative "indexer"
+      result = if scope == "global"
+                 NotaKnowledgeBase::Indexer.save_global_best_practice(name, content)
+               else
+                 NotaKnowledgeBase::Indexer.save_best_practice(name, content)
+               end
+      MCP::Tool::Response.new([{ type: "text", text: result }])
+    end
+  end
+end
+
+class ListBestPracticesTool < MCP::Tool
+  description("List all user best practices with their indexing status.")
+
+  class << self
+    def call(server_context:)
+      require_relative "indexer"
+      result = NotaKnowledgeBase::Indexer.list_best_practices
+      MCP::Tool::Response.new([{ type: "text", text: result }])
+    end
+  end
+end
+
+class RemoveBestPracticeTool < MCP::Tool
+  description("Remove a user best practice by name. Deletes the file and removes chunks from the index.")
+
+  input_schema(
+    properties: {
+      name: {
+        type: "string",
+        description: "Name of the practice to remove (as shown by list_best_practices)"
+      }
+    },
+    required: ["name"]
+  )
+
+  class << self
+    def call(name:, server_context:)
+      require_relative "indexer"
+      result = NotaKnowledgeBase::Indexer.remove_best_practice(name)
+      MCP::Tool::Response.new([{ type: "text", text: result }])
+    end
+  end
+end
+
+class GetBestPracticesIndexTool < MCP::Tool
+  description(
+    "Get the user's condensed best practices index. " \
+    "Returns a summary of all user best practices, or a message if none exist yet."
+  )
+
+  class << self
+    def call(server_context:)
+      require_relative "indexer"
+      result = NotaKnowledgeBase::Indexer.get_best_practices_index
+      MCP::Tool::Response.new([{ type: "text", text: result }])
+    end
+  end
+end
+
+class SaveBestPracticesIndexTool < MCP::Tool
+  description(
+    "Save the user's condensed best practices index. " \
+    "Stores a markdown summary distilled from all user best practices."
+  )
+
+  input_schema(
+    properties: {
+      content: {
+        type: "string",
+        description: "The condensed best practices index in markdown format"
+      }
+    },
+    required: ["content"]
+  )
+
+  class << self
+    def call(content:, server_context:)
+      require_relative "indexer"
+      result = NotaKnowledgeBase::Indexer.save_best_practices_index(content)
+      MCP::Tool::Response.new([{ type: "text", text: result }])
+    end
+  end
+end
+
 module NotaKnowledgeBase
   def self.run_server
     # Ensure knowledge.db exists before accepting tool calls.
@@ -446,7 +559,9 @@ module NotaKnowledgeBase
       tools: [SearchTool, ApiReferenceTool, SimilarWorksTool, DependenciesTool, PatternTool, CheckSetupTool,
               ListWorksTool, AddWorkTool, RemoveWorkTool, IndexStatusTool,
               GetAnalysisFrameworkTool, SaveAnalysisFrameworkTool, ResetAnalysisFrameworkTool, AddAnalysisTool,
-              GetInspirationFrameworkTool, SaveInspirationFrameworkTool, ResetInspirationFrameworkTool]
+              GetInspirationFrameworkTool, SaveInspirationFrameworkTool, ResetInspirationFrameworkTool,
+              SaveBestPracticeTool, ListBestPracticesTool, RemoveBestPracticeTool,
+              GetBestPracticesIndexTool, SaveBestPracticesIndexTool]
     )
 
     transport = MCP::Server::Transports::StdioTransport.new(server)

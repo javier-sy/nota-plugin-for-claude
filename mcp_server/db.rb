@@ -16,9 +16,10 @@ require_relative "embeddings"
 
 module NotaKnowledgeBase
   module DB
-    COLLECTION_NAMES = %w[docs api demo_readme demo_code gem_readme].freeze
+    COLLECTION_NAMES = %w[docs api demo_readme demo_code gem_readme best_practice].freeze
     PRIVATE_COLLECTION = "private_works"
     ANALYSIS_COLLECTION = "analysis"
+    BEST_PRACTICE_COLLECTION = "best_practice"
 
     module_function
 
@@ -310,6 +311,52 @@ module NotaKnowledgeBase
       end
 
       count
+    end
+
+    # Remove all best practice chunks matching a practice name (from both tables).
+    # Best practice chunks have kind='best_practice' and source like "best-practices/name".
+    # Returns the number of chunks deleted.
+    def remove_best_practice_chunks(db, practice_name)
+      pattern = "best-practices/#{practice_name}%"
+
+      row = db.execute(
+        "SELECT COUNT(*) AS cnt FROM chunks WHERE kind = 'best_practice' AND source LIKE ?",
+        [pattern]
+      ).first
+      count = row["cnt"]
+
+      return 0 if count == 0
+
+      db.transaction do
+        db.execute(<<~SQL, [pattern])
+          DELETE FROM chunks_vec
+          WHERE chunk_id IN (
+            SELECT id FROM chunks
+            WHERE kind = 'best_practice' AND source LIKE ?
+          )
+        SQL
+
+        db.execute(
+          "DELETE FROM chunks WHERE kind = 'best_practice' AND source LIKE ?",
+          [pattern]
+        )
+      end
+
+      count
+    end
+
+    # List best practices with chunk counts.
+    # Returns array of hashes: [{"practice_name" => "...", "chunk_count" => N}, ...]
+    def list_best_practices(db)
+      db.execute(<<~SQL)
+        SELECT
+          REPLACE(source, 'best-practices/', '') AS practice_name,
+          COUNT(*) AS chunk_count
+        FROM chunks
+        WHERE kind = 'best_practice'
+        GROUP BY source
+        ORDER BY source
+      SQL
     end
   end
 end

@@ -33,6 +33,7 @@ Generate a structured musical analysis of a composition project, guided by the a
    - Be specific: name the scales, series operations, generative tools, and patterns actually used
    - For the **"Relation to Other Artists"** dimension: **you MUST use WebSearch** to find relevant composers, techniques, and movements. Cite your sources. Do not rely solely on training data.
    - Adapt the depth of each dimension to what is actually present in the code — if a dimension is not relevant (e.g., no generative tools used), say so briefly rather than forcing content
+   - For the "Coding Best Practices" dimension (or equivalent): if a practice identified in this analysis is a reusable pattern applicable beyond this specific work, mark it as **[consolidation candidate]** — this signals that `/nota:best-practices` can extract and formalize it
 
 7. **Present the analysis** to the user for review. Show the full analysis text.
 

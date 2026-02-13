@@ -63,7 +63,7 @@ module NotaKnowledgeBase
 
         results = DB.knn_search(knowledge_db, embedding, kind: kind, n_results: 5)
 
-        if private_db && %w[all private_works analysis].include?(kind)
+        if private_db && %w[all private_works analysis best_practice].include?(kind)
           private_search_kind = (kind == "all") ? "all" : kind
           private_results = DB.knn_search(private_db, embedding, kind: private_search_kind, n_results: 5)
           results = (results + private_results).sort_by { |r| r["distance"] }.first(5)

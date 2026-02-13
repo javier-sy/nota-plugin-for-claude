@@ -29,6 +29,8 @@ Help the user program and modify algorithmic compositions using MusaDSL and Ruby
 
 4. **Research using MCP tools** — verify everything against the knowledge base:
    - `search` — find relevant documentation, patterns, and examples
+   - `search` with `kind: "best_practice"` — find relevant best practices for the techniques being used
+   - `get_best_practices_index` — read the user's condensed best practices index to check for applicable patterns
    - `api_reference` — verify exact method signatures and parameters before using them
    - `pattern` — get working code patterns for specific techniques
    - `dependencies` — what setup is needed for a concept
@@ -42,9 +44,10 @@ Help the user program and modify algorithmic compositions using MusaDSL and Ruby
 
 6. **Write the code**:
    - Verify every API method against the knowledge base before using it — **never invent methods**
+   - Apply relevant best practices found in the search — both general (from knowledge.db) and user-specific (from private.db)
    - Follow the project structure conventions (see below)
    - Include comments where the logic maps musical concepts to code
-   - Use the static reference in `rules/musadsl-reference.md` and MCP tools together for accuracy
+   - Use the static reference in `rules/musadsl-reference.md`, `rules/best-practices.md`, and MCP tools together for accuracy
 
 7. **If creating a new composition**: generate the complete project structure:
    - `musa/main.rb` — entry point with transport, clock, scale, voices, transcriptor setup

@@ -519,6 +519,15 @@ module NotaKnowledgeBase
         )
       end
 
+      # 7. Best practices
+      bp_dir = File.join(source_root, "nota", "data", "best-practices")
+      if File.directory?(bp_dir)
+        Dir.glob(File.join(bp_dir, "*.md")).sort.each do |md_file|
+          rel = relative_path(md_file, source_root)
+          all_chunks.concat(chunk_markdown(md_file, kind: "best_practice", source_label: rel))
+        end
+      end
+
       # Validate: no chunk should leak absolute filesystem paths
       bad = all_chunks.select { |c| c.metadata["source"]&.start_with?("/") }
       unless bad.empty?

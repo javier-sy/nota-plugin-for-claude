@@ -346,6 +346,139 @@ module NotaKnowledgeBase
       lines.join("\n")
     end
 
+    USER_BEST_PRACTICES_DIR = File.join(USER_FRAMEWORK_DIR, "best-practices")
+    USER_BEST_PRACTICES_INDEX_PATH = File.join(USER_FRAMEWORK_DIR, "private-best-practices.md")
+
+    def do_save_best_practice(name, content, db_path)
+      require_relative "db"
+
+      # Write markdown file to user best-practices directory
+      FileUtils.mkdir_p(USER_BEST_PRACTICES_DIR)
+      file_path = File.join(USER_BEST_PRACTICES_DIR, "#{name}.md")
+      File.write(file_path, content, encoding: "utf-8")
+
+      # Chunk the content
+      chunks = Chunker.chunk_markdown_text(
+        content,
+        kind: "best_practice",
+        source_label: "best-practices/#{name}"
+      )
+
+      if chunks.empty?
+        return "Best practice '#{name}' saved to #{file_path} (no indexable content)."
+      end
+
+      # Upsert into private.db
+      FileUtils.mkdir_p(File.dirname(db_path))
+      db = DB.open(db_path)
+      begin
+        DB.create_schema(db)
+        DB.remove_best_practice_chunks(db, name)
+        DB.upsert_chunks(db, chunks, collection_override: "best_practice")
+      ensure
+        db.close
+      end
+
+      "Best practice '#{name}' saved and indexed (#{chunks.length} chunks) in #{file_path}."
+    end
+
+    def do_save_global_best_practice(name, content, plugin_root)
+      bp_dir = File.join(plugin_root, "data", "best-practices")
+      FileUtils.mkdir_p(bp_dir)
+      file_path = File.join(bp_dir, "#{name}.md")
+      File.write(file_path, content, encoding: "utf-8")
+
+      "Global best practice '#{name}' saved to #{file_path}.\nRun `make build` to reindex the knowledge base."
+    end
+
+    def do_list_best_practices(db_path)
+      require_relative "db"
+
+      indexed = []
+      if File.exist?(db_path)
+        db = DB.open(db_path)
+        begin
+          indexed = DB.list_best_practices(db)
+        ensure
+          db.close
+        end
+      end
+
+      # Also list files on disk (in case some exist but aren't indexed)
+      disk_files = []
+      if File.directory?(USER_BEST_PRACTICES_DIR)
+        disk_files = Dir.glob(File.join(USER_BEST_PRACTICES_DIR, "*.md")).sort.map do |f|
+          File.basename(f, ".md")
+        end
+      end
+
+      indexed_names = indexed.map { |r| r["practice_name"] }
+      all_names = (indexed_names + disk_files).uniq.sort
+
+      if all_names.empty?
+        return "No user best practices found.\n\nUse `/nota:best-practices` to create practices from your analyses or add them manually."
+      end
+
+      lines = ["User best practices:", ""]
+      lines << format("  %-40s %s", "Practice", "Chunks")
+      lines << "  #{'-' * 40} #{'-' * 6}"
+
+      all_names.each do |name|
+        row = indexed.find { |r| r["practice_name"] == name }
+        chunk_count = row ? row["chunk_count"] : 0
+        status = chunk_count > 0 ? chunk_count.to_s : "(not indexed)"
+        lines << format("  %-40s %s", name, status)
+      end
+
+      lines << ""
+      lines << "Total: #{all_names.length} practices, #{indexed.sum { |r| r['chunk_count'] }} indexed chunks"
+      lines.join("\n")
+    end
+
+    def do_remove_best_practice(name, db_path)
+      require_relative "db"
+
+      removed_chunks = 0
+      if File.exist?(db_path)
+        db = DB.open(db_path)
+        begin
+          removed_chunks = DB.remove_best_practice_chunks(db, name)
+        ensure
+          db.close
+        end
+      end
+
+      file_path = File.join(USER_BEST_PRACTICES_DIR, "#{name}.md")
+      file_removed = false
+      if File.exist?(file_path)
+        File.delete(file_path)
+        file_removed = true
+      end
+
+      if removed_chunks == 0 && !file_removed
+        "Best practice '#{name}' not found."
+      else
+        parts = []
+        parts << "#{removed_chunks} chunks removed from index" if removed_chunks > 0
+        parts << "file deleted" if file_removed
+        "Best practice '#{name}' removed (#{parts.join(', ')})."
+      end
+    end
+
+    def do_get_best_practices_index
+      if File.exist?(USER_BEST_PRACTICES_INDEX_PATH)
+        File.read(USER_BEST_PRACTICES_INDEX_PATH, encoding: "utf-8")
+      else
+        "No best practices index generated yet.\n\nUse `/nota:best-practices` to generate one from your practices."
+      end
+    end
+
+    def do_save_best_practices_index(content)
+      FileUtils.mkdir_p(USER_FRAMEWORK_DIR)
+      File.write(USER_BEST_PRACTICES_INDEX_PATH, content, encoding: "utf-8")
+      "Best practices index saved to #{USER_BEST_PRACTICES_INDEX_PATH}."
+    end
+
     def do_status(chunks_dir, db_path, private_db_path)
       lines = []
 
@@ -450,6 +583,33 @@ module NotaKnowledgeBase
     def add_analysis(work_name, analysis_text)
       require_relative "db"
       do_add_analysis(work_name, analysis_text, DB.default_private_db_path)
+    end
+
+    def save_best_practice(name, content)
+      require_relative "db"
+      do_save_best_practice(name, content, DB.default_private_db_path)
+    end
+
+    def save_global_best_practice(name, content)
+      do_save_global_best_practice(name, content, File.dirname(__dir__))
+    end
+
+    def list_best_practices
+      require_relative "db"
+      do_list_best_practices(DB.default_private_db_path)
+    end
+
+    def remove_best_practice(name)
+      require_relative "db"
+      do_remove_best_practice(name, DB.default_private_db_path)
+    end
+
+    def get_best_practices_index
+      do_get_best_practices_index
+    end
+
+    def save_best_practices_index(content)
+      do_save_best_practices_index(content)
     end
 
     def main

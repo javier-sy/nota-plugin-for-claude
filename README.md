@@ -4,7 +4,7 @@ MusaDSL composition assistant: learn the framework, code compositions, explore i
 
 ## What it does
 
-Nota transforms Claude Code into an algorithmic composition assistant with deep knowledge of the [MusaDSL](https://musadsl.yeste.studio) framework. It provides 9 interactive skills that cover the entire creative process — from understanding the framework, through brainstorming ideas, to writing verified code and analyzing the results.
+Nota transforms Claude Code into an algorithmic composition assistant with deep knowledge of the [MusaDSL](https://musadsl.yeste.studio) framework. It provides 10 interactive skills that cover the entire creative process — from understanding the framework, through brainstorming ideas, to writing verified code, analyzing the results, and consolidating best practices.
 
 Everything is backed by a knowledge base with MusaDSL documentation, API reference, 23 demo projects, and (optionally) your own compositions and their musical analyses.
 
@@ -75,6 +75,20 @@ The default **analysis framework** has 10 dimensions: Formal Structure, Harmonic
 
 Removing a work with `/nota:index` also removes its associated analysis.
 
+### `/nota:best-practices` — Best practices management
+
+Manages best practices for MusaDSL composition projects. Practices can be:
+
+- **Generated from analyses** — extracts recurring patterns from your composition analyses and formalizes them
+- **Added manually** — describe a practice and the LLM structures it with title, description, example, and optional anti-pattern
+- **Listed, edited, removed** — full CRUD for your practice catalog
+
+Two layers:
+- **General practices** ship with the plugin (12 practices covering project structure, runtime patterns, and coding style), indexed in `knowledge.db` and searchable via `search` with `kind: "best_practice"`.
+- **User practices** are private, stored in `~/.config/nota/best-practices/`, indexed in `private.db`.
+
+`/nota:code` automatically searches best practices during its research step, so your consolidated patterns are applied when writing new code.
+
 ### Other skills
 
 | Skill | Purpose |
@@ -90,15 +104,18 @@ The plugin supports a continuous creative cycle where each step feeds into the n
 
 ```
 /nota:think ──→ /nota:code ──→ /nota:index ──→ /nota:analyze ──╮
-  ↑                                          │
-  ╰──────────────────────────────────────────╯
+  ↑                 ↑                              │            │
+  │                 │                              ╰──→ /nota:best-practices
+  │                 │                                           │
+  ╰─────────────────╰───────────────────────────────────────────╯
 ```
 
 - **`/nota:think`** (ideation) — generates ideas drawing from the inspiration framework, MusaDSL knowledge, and your previous analyses and works. The more you have composed and analyzed, the richer the ideation becomes.
-- **`/nota:code`** (composition) — implements ideas as working MusaDSL code, verified against the knowledge base and informed by similar works.
+- **`/nota:code`** (composition) — implements ideas as working MusaDSL code, verified against the knowledge base, best practices, and similar works.
 - **`/nota:index`** (knowledge building) — stores the composition's code, making it searchable and available for future reference by all other skills.
-- **`/nota:analyze`** (reflection) — reads the code, interprets it musically, and stores the analysis as searchable knowledge.
-- Back to **`/nota:think`** — the new analysis enriches future ideation: patterns detected across works, unexplored directions, dialogue with composers.
+- **`/nota:analyze`** (reflection) — reads the code, interprets it musically, and stores the analysis as searchable knowledge. Marks reusable patterns as **[consolidation candidate]**.
+- **`/nota:best-practices`** (consolidation) — extracts recurring patterns from analyses into formalized, searchable practices that feed back into `/nota:code`.
+- Back to **`/nota:think`** — the new analysis and practices enrich future ideation: patterns detected across works, unexplored directions, dialogue with composers.
 
 The two databases are the memory of this cycle:
 - **`knowledge.db`** holds MusaDSL knowledge (what is possible)
@@ -114,7 +131,7 @@ This section is for contributors who want to modify the plugin itself or rebuild
 
 The plugin has three knowledge layers:
 
-1. **Static reference** (`rules/musadsl-reference.md`) — always loaded in context (~5-8k tokens)
+1. **Static reference** (`rules/musadsl-reference.md` + `rules/best-practices.md`) — always loaded in context
 2. **Semantic search** (MCP server + sqlite-vec + Voyage AI embeddings) — retrieves relevant docs, API, and code examples on demand
 3. **Works catalog** — finds similar compositions from demos and private indexed works
 
@@ -126,11 +143,11 @@ Two separate databases:
 
 When searching, the MCP server queries both databases and merges results by cosine distance. If `private.db` doesn't exist, searches use only the public knowledge base.
 
-### MCP Tools (17)
+### MCP Tools (22)
 
 | Tool | Purpose |
 |------|---------|
-| `search` | Semantic search across all knowledge (docs, API, demos, private works, analyses) |
+| `search` | Semantic search across all knowledge (docs, API, demos, private works, analyses, best practices) |
 | `api_reference` | Exact API reference lookup by module/method |
 | `similar_works` | Find similar works and demo examples (includes private works and analyses) |
 | `dependencies` | Dependency chain for a concept (what setup is needed) |
@@ -147,6 +164,11 @@ When searching, the MCP server queries both databases and merges results by cosi
 | `get_inspiration_framework` | Get the current inspiration framework (default or user-customized) |
 | `save_inspiration_framework` | Save a customized inspiration framework |
 | `reset_inspiration_framework` | Reset the inspiration framework to default |
+| `save_best_practice` | Save a best practice (private or global scope) |
+| `list_best_practices` | List all user best practices with indexing status |
+| `remove_best_practice` | Remove a user best practice by name |
+| `get_best_practices_index` | Get the user's condensed best practices index |
+| `save_best_practices_index` | Save the user's condensed best practices index |
 
 ### Building the public knowledge base
 
@@ -181,6 +203,7 @@ nota/
 │   ├── think/               # /nota:think skill — creative ideation and brainstorming
 │   ├── index/               # /nota:index skill — manage private works index
 │   ├── analyze/             # /nota:analyze skill — structured composition analysis
+│   ├── best_practices/      # /nota:best-practices skill — manage best practices
 │   ├── analysis_framework/  # /nota:analysis_framework skill — manage analysis dimensions
 │   ├── inspiration_framework/ # /nota:inspiration_framework skill — manage inspiration dimensions
 │   └── setup/               # /nota:setup skill — configuration and troubleshooting
@@ -188,8 +211,15 @@ nota/
 │   ├── analysis-framework.md      # Default analysis framework (10 dimensions)
 │   └── inspiration-framework.md   # Default inspiration framework (9 dimensions)
 ├── rules/                   # Static reference (always in context)
+│   ├── musadsl-reference.md       # Condensed API reference
+│   └── best-practices.md         # Condensed best practices reference
+├── data/
+│   ├── best-practices/      # Global best practice source files (12 .md files)
+│   └── chunks/              # Generated JSONL chunks + manifest
+├── prompts/                 # Regeneration prompts for maintainers
+│   └── regenerate-reference.md        # How to regenerate musadsl-reference.md
 ├── mcp_server/              # Ruby MCP server + sqlite-vec
-│   ├── server.rb            # MCP tools (17 tools)
+│   ├── server.rb            # MCP tools (22 tools)
 │   ├── search.rb            # Dual-DB search (knowledge.db + private.db)
 │   ├── chunker.rb           # Source material → chunks
 │   ├── indexer.rb           # Chunk + embed + store orchestrator
