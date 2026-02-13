@@ -38,11 +38,15 @@ Generate a structured musical analysis of a composition project, guided by the a
 
 8. **Iterate if requested**. If the user wants changes, corrections, or additions, modify the analysis accordingly and present again.
 
-9. **Store the analysis** when the user approves. Call the `add_analysis` MCP tool with:
-   - `work_name`: the basename of the composition directory (same format as `list_works`)
-   - `analysis_text`: the full analysis in markdown format
+9. **Store the analysis** when the user approves:
 
-   **Always ask for explicit approval before storing.** Do not index automatically.
+   a. **Save to filesystem** — write the analysis as a markdown file in the root of the composition project directory, named `analysis YYYY-MM-DD-HHMM.md` (using the current date and time). This creates a permanent, readable record alongside the code.
+
+   b. **Index in knowledge base** — call the `add_analysis` MCP tool with:
+      - `work_name`: the basename of the composition directory (same format as `list_works`)
+      - `analysis_text`: the full analysis in markdown format
+
+   **Always ask for explicit approval before storing.** Do not save or index automatically.
 
 ## Guards
 
