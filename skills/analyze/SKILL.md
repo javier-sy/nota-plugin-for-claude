@@ -54,7 +54,7 @@ Generate a structured musical analysis of a composition project, guided by the a
 - **Always verify MusaDSL API usage** against the knowledge base when encountering unfamiliar patterns.
 - **WebSearch is mandatory** for the "Relation to Other Artists" dimension (or equivalent if the framework has been customized).
 - **Always ask for approval** before calling `add_analysis` to store the result.
-- If the work has not been indexed yet (not in `list_works`), suggest running `/index` first to add the work's code to the searchable index, then proceed with the analysis.
+- If the work has not been indexed yet (not in `list_works`), suggest running `/nota:index` first to add the work's code to the searchable index, then proceed with the analysis.
 
 ## Important
 

@@ -4,7 +4,7 @@
 
 Whenever the conversation involves **creative thinking about a composition** — generating ideas, exploring musical directions, making aesthetic decisions, evaluating options, reflecting on the compositional process — you MUST persist the substance of that thinking to a `think-journal.md` file at the **root of the current musical project**.
 
-This applies regardless of whether `/think` was explicitly invoked. Any conversation that produces creative insights about a composition must be journaled.
+This applies regardless of whether `/nota:think` was explicitly invoked. Any conversation that produces creative insights about a composition must be journaled.
 
 ## What to journal
 
@@ -49,7 +49,7 @@ Unresolved questions worth revisiting.
 ## How to update
 
 - **Add new ideas** to Active Threads when they emerge in conversation
-- **Move ideas to Explored** when they've been developed or implemented via `/code`
+- **Move ideas to Explored** when they've been developed or implemented via `/nota:code`
 - **Move ideas to Discarded** when explicitly rejected, always noting why
 - **Record decisions** when the user makes a choice between alternatives
 - **Consolidate** — if an active thread evolves across multiple conversations, update it in place rather than appending duplicates

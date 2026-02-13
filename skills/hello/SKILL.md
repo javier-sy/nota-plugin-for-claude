@@ -25,44 +25,44 @@ Present a warm welcome and a comprehensive overview of what the plugin provides.
 
 4. **Present the 5 core skills** — explain each one briefly, in this order:
 
-   **`/explain`** — Semantic search. Ask about any MusaDSL concept and get an accurate, sourced answer. Retrieves relevant documentation, API details, and code examples from the knowledge base.
+   **`/nota:explain`** — Semantic search. Ask about any MusaDSL concept and get an accurate, sourced answer. Retrieves relevant documentation, API details, and code examples from the knowledge base.
 
-   **`/think`** — Creative thinking. Generates ideas for new compositions or explores new directions for existing ones, drawing from:
+   **`/nota:think`** — Creative thinking. Generates ideas for new compositions or explores new directions for existing ones, drawing from:
    - The **inspiration framework** — 9 configurable creative dimensions: Structure, Time, Pitch, Algorithm, Texture, Instrumentation, Reference, Dialogue, and Constraint
    - The user's **previous analyses** — to detect patterns in their practice and suggest unexplored directions
    - **MusaDSL knowledge** — to ensure every idea maps to concrete, implementable tools and patterns
    - **WebSearch** — to connect ideas to composers, techniques, and traditions
 
-   Customize the dimensions with `/inspiration_framework`.
+   Customize the dimensions with `/nota:inspiration_framework`.
 
-   **`/code`** — Composition coding. Translates musical intentions into working MusaDSL Ruby code. Can create new compositions from scratch or modify existing ones, drawing from:
+   **`/nota:code`** — Composition coding. Translates musical intentions into working MusaDSL Ruby code. Can create new compositions from scratch or modify existing ones, drawing from:
    - **MusaDSL knowledge** — API reference, documentation, patterns, and demo examples to verify every method call
    - **Similar works** — from both the public demos and the user's own indexed compositions
    - The user's **existing code** — reading from the filesystem to understand and extend it
 
-   The user describes their musical intention ("more intense", "like a canon", "more chaotic") and `/code` translates it into concrete technical approaches.
+   The user describes their musical intention ("more intense", "like a canon", "more chaotic") and `/nota:code` translates it into concrete technical approaches.
 
-   **`/index`** — Works indexing. Indexes the user's composition projects so Claude can reference them. Once indexed, works appear in search results and inform all other skills. Use `/index` to add, update, remove, and list compositions.
+   **`/nota:index`** — Works indexing. Indexes the user's composition projects so Claude can reference them. Once indexed, works appear in search results and inform all other skills. Use `/nota:index` to add, update, remove, and list compositions.
 
-   **`/analyze`** — Musical analysis. Reads the code, interprets it musically, and produces a detailed structured analysis across 10 configurable dimensions: Formal Structure, Harmonic and Modal Language, Rhythmic and Temporal Strategy, Generative Strategy, Texture and Instrumentation, Idiomatic Usage and Special Features, Relation to Other Artists, Notable Technical Patterns, Coding Best Practices, and Conclusion. The analysis is stored as searchable knowledge that enriches future `/think` ideation and `/code` references.
+   **`/nota:analyze`** — Musical analysis. Reads the code, interprets it musically, and produces a detailed structured analysis across 10 configurable dimensions: Formal Structure, Harmonic and Modal Language, Rhythmic and Temporal Strategy, Generative Strategy, Texture and Instrumentation, Idiomatic Usage and Special Features, Relation to Other Artists, Notable Technical Patterns, Coding Best Practices, and Conclusion. The analysis is stored as searchable knowledge that enriches future `/nota:think` ideation and `/nota:code` references.
 
-   Customize the dimensions with `/analysis_framework`.
+   Customize the dimensions with `/nota:analysis_framework`.
 
 5. **Explain the complete creative cycle:**
 
    The plugin supports a continuous creative cycle where each step feeds into the next:
 
    ```
-   /think ──→ /code ──→ /index ──→ /analyze ──╮
+   /nota:think ──→ /nota:code ──→ /nota:index ──→ /nota:analyze ──╮
      ↑                                          │
      ╰──────────────────────────────────────────╯
    ```
 
-   - **`/think`** (ideation) — generates ideas drawing from the inspiration framework, MusaDSL knowledge, and the user's previous analyses and works. The more the user has composed and analyzed, the richer the ideation becomes.
-   - **`/code`** (composition) — implements ideas as working MusaDSL code, verified against the knowledge base and informed by similar works.
-   - **`/index`** (knowledge building) — stores the composition's code, making it searchable and available for future reference by all other skills.
-   - **`/analyze`** (reflection) — reads the code, interprets it musically, and stores the analysis as searchable knowledge.
-   - Back to **`/think`** — the new analysis enriches future ideation: patterns detected across works, unexplored directions, dialogue with composers.
+   - **`/nota:think`** (ideation) — generates ideas drawing from the inspiration framework, MusaDSL knowledge, and the user's previous analyses and works. The more the user has composed and analyzed, the richer the ideation becomes.
+   - **`/nota:code`** (composition) — implements ideas as working MusaDSL code, verified against the knowledge base and informed by similar works.
+   - **`/nota:index`** (knowledge building) — stores the composition's code, making it searchable and available for future reference by all other skills.
+   - **`/nota:analyze`** (reflection) — reads the code, interprets it musically, and stores the analysis as searchable knowledge.
+   - Back to **`/nota:think`** — the new analysis enriches future ideation: patterns detected across works, unexplored directions, dialogue with composers.
 
    The two databases are the memory of this cycle:
    - **`knowledge.db`** holds MusaDSL knowledge (what is possible)
@@ -74,12 +74,12 @@ Present a warm welcome and a comprehensive overview of what the plugin provides.
 
    | Skill | Purpose |
    |-------|---------|
-   | `/hello` | This welcome and capabilities overview |
-   | `/setup` | Plugin configuration and troubleshooting |
-   | `/analysis_framework` | View, customize, or reset the analysis dimensions |
-   | `/inspiration_framework` | View, customize, or reset the creative dimensions |
+   | `/nota:hello` | This welcome and capabilities overview |
+   | `/nota:setup` | Plugin configuration and troubleshooting |
+   | `/nota:analysis_framework` | View, customize, or reset the analysis dimensions |
+   | `/nota:inspiration_framework` | View, customize, or reset the creative dimensions |
 
 ## Important
 
 - **Do NOT call `check_setup`** or any other MCP tool. This skill is purely informational — it presents the overview from the instructions above.
-- If the user mentions configuration problems, API key issues, or the knowledge base not being found, redirect them to `/setup` instead.
+- If the user mentions configuration problems, API key issues, or the knowledge base not being found, redirect them to `/nota:setup` instead.

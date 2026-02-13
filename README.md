@@ -32,15 +32,15 @@ Then add the API key to your shell profile:
 export VOYAGE_API_KEY="your-key-here"
 ```
 
-The knowledge base is **automatically downloaded** on first session start. Run `/setup` to verify everything is working.
+The knowledge base is **automatically downloaded** on first session start. Run `/nota:setup` to verify everything is working.
 
 ## Skills
 
-### `/explain` — Semantic search
+### `/nota:explain` — Semantic search
 
 Ask about any MusaDSL concept and get an accurate, sourced answer. Retrieves relevant documentation, API details, and code examples from the knowledge base.
 
-### `/think` — Creative thinking
+### `/nota:think` — Creative thinking
 
 Generates ideas for new compositions or explores new directions for existing ones. It draws from multiple sources:
 
@@ -49,9 +49,9 @@ Generates ideas for new compositions or explores new directions for existing one
 - **MusaDSL knowledge** — to ensure every idea maps to concrete, implementable tools and patterns
 - **WebSearch** — to connect ideas to composers, techniques, and traditions with accurate references
 
-The default **inspiration framework** has 9 dimensions: Structure, Time, Pitch, Algorithm, Texture, Instrumentation, Reference, Dialogue, and Constraint. Customize them with `/inspiration_framework`.
+The default **inspiration framework** has 9 dimensions: Structure, Time, Pitch, Algorithm, Texture, Instrumentation, Reference, Dialogue, and Constraint. Customize them with `/nota:inspiration_framework`.
 
-### `/code` — Composition coding
+### `/nota:code` — Composition coding
 
 Translates musical intentions into working MusaDSL Ruby code. It can create new compositions from scratch or modify existing ones, drawing from:
 
@@ -59,46 +59,46 @@ Translates musical intentions into working MusaDSL Ruby code. It can create new 
 - **Similar works** — from both the public demos and your own indexed compositions
 - Your **existing code** — reading from the filesystem to understand and extend it
 
-You describe your musical intention ("more intense", "like a canon", "more chaotic") and `/code` translates it into concrete technical approaches, always proposing the approach before writing.
+You describe your musical intention ("more intense", "like a canon", "more chaotic") and `/nota:code` translates it into concrete technical approaches, always proposing the approach before writing.
 
-### `/index` — Works indexing
+### `/nota:index` — Works indexing
 
 Indexes your composition projects so Claude can reference them. All `.rb` and `.md` files are indexed recursively. Once indexed, your works appear in search results and inform all other skills.
 
-Use `/index` to add, update, remove, and list indexed compositions.
+Use `/nota:index` to add, update, remove, and list indexed compositions.
 
-### `/analyze` — Musical analysis
+### `/nota:analyze` — Musical analysis
 
-Reads your code, interprets it musically, and produces a detailed structured analysis. The analysis is stored as searchable knowledge, enriching future searches, `/think` ideation, and `/code` references. This transforms search from "what does the code say" to "what does the code do musically."
+Reads your code, interprets it musically, and produces a detailed structured analysis. The analysis is stored as searchable knowledge, enriching future searches, `/nota:think` ideation, and `/nota:code` references. This transforms search from "what does the code say" to "what does the code do musically."
 
-The default **analysis framework** has 10 dimensions: Formal Structure, Harmonic and Modal Language, Rhythmic and Temporal Strategy, Generative Strategy, Texture and Instrumentation, Idiomatic Usage and Special Features, Relation to Other Artists, Notable Technical Patterns, Coding Best Practices, and Conclusion. Customize them with `/analysis_framework`.
+The default **analysis framework** has 10 dimensions: Formal Structure, Harmonic and Modal Language, Rhythmic and Temporal Strategy, Generative Strategy, Texture and Instrumentation, Idiomatic Usage and Special Features, Relation to Other Artists, Notable Technical Patterns, Coding Best Practices, and Conclusion. Customize them with `/nota:analysis_framework`.
 
-Removing a work with `/index` also removes its associated analysis.
+Removing a work with `/nota:index` also removes its associated analysis.
 
 ### Other skills
 
 | Skill | Purpose |
 |-------|---------|
-| `/hello` | Welcome and capabilities overview |
-| `/setup` | Plugin configuration and troubleshooting |
-| `/analysis_framework` | View, customize, or reset the analysis dimensions |
-| `/inspiration_framework` | View, customize, or reset the creative dimensions |
+| `/nota:hello` | Welcome and capabilities overview |
+| `/nota:setup` | Plugin configuration and troubleshooting |
+| `/nota:analysis_framework` | View, customize, or reset the analysis dimensions |
+| `/nota:inspiration_framework` | View, customize, or reset the creative dimensions |
 
 ## The Creative Cycle
 
 The plugin supports a continuous creative cycle where each step feeds into the next:
 
 ```
-/think ──→ /code ──→ /index ──→ /analyze ──╮
+/nota:think ──→ /nota:code ──→ /nota:index ──→ /nota:analyze ──╮
   ↑                                          │
   ╰──────────────────────────────────────────╯
 ```
 
-- **`/think`** (ideation) — generates ideas drawing from the inspiration framework, MusaDSL knowledge, and your previous analyses and works. The more you have composed and analyzed, the richer the ideation becomes.
-- **`/code`** (composition) — implements ideas as working MusaDSL code, verified against the knowledge base and informed by similar works.
-- **`/index`** (knowledge building) — stores the composition's code, making it searchable and available for future reference by all other skills.
-- **`/analyze`** (reflection) — reads the code, interprets it musically, and stores the analysis as searchable knowledge.
-- Back to **`/think`** — the new analysis enriches future ideation: patterns detected across works, unexplored directions, dialogue with composers.
+- **`/nota:think`** (ideation) — generates ideas drawing from the inspiration framework, MusaDSL knowledge, and your previous analyses and works. The more you have composed and analyzed, the richer the ideation becomes.
+- **`/nota:code`** (composition) — implements ideas as working MusaDSL code, verified against the knowledge base and informed by similar works.
+- **`/nota:index`** (knowledge building) — stores the composition's code, making it searchable and available for future reference by all other skills.
+- **`/nota:analyze`** (reflection) — reads the code, interprets it musically, and stores the analysis as searchable knowledge.
+- Back to **`/nota:think`** — the new analysis enriches future ideation: patterns detected across works, unexplored directions, dialogue with composers.
 
 The two databases are the memory of this cycle:
 - **`knowledge.db`** holds MusaDSL knowledge (what is possible)
@@ -175,15 +175,15 @@ The CI only rebuilds `knowledge.db` — it never touches `private.db`.
 nota/
 ├── .claude-plugin/          # Plugin metadata (plugin.json, marketplace.json)
 ├── skills/
-│   ├── hello/               # /hello skill — welcome and capabilities overview
-│   ├── explain/             # /explain skill — MusaDSL concept explanations
-│   ├── code/                # /code skill — composition coding and modification
-│   ├── think/               # /think skill — creative ideation and brainstorming
-│   ├── index/               # /index skill — manage private works index
-│   ├── analyze/             # /analyze skill — structured composition analysis
-│   ├── analysis_framework/  # /analysis_framework skill — manage analysis dimensions
-│   ├── inspiration_framework/ # /inspiration_framework skill — manage inspiration dimensions
-│   └── setup/               # /setup skill — configuration and troubleshooting
+│   ├── hello/               # /nota:hello skill — welcome and capabilities overview
+│   ├── explain/             # /nota:explain skill — MusaDSL concept explanations
+│   ├── code/                # /nota:code skill — composition coding and modification
+│   ├── think/               # /nota:think skill — creative ideation and brainstorming
+│   ├── index/               # /nota:index skill — manage private works index
+│   ├── analyze/             # /nota:analyze skill — structured composition analysis
+│   ├── analysis_framework/  # /nota:analysis_framework skill — manage analysis dimensions
+│   ├── inspiration_framework/ # /nota:inspiration_framework skill — manage inspiration dimensions
+│   └── setup/               # /nota:setup skill — configuration and troubleshooting
 ├── defaults/                # Default configuration files
 │   ├── analysis-framework.md      # Default analysis framework (10 dimensions)
 │   └── inspiration-framework.md   # Default inspiration framework (9 dimensions)

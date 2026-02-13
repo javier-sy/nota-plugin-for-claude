@@ -189,7 +189,7 @@ class CheckSetupTool < MCP::Tool
       # Check private DB
       private_db_path = NotaKnowledgeBase::DB.default_private_db_path
       has_private_db = File.exist?(private_db_path)
-      status << "- **Private works DB**: #{has_private_db ? 'present' : 'not present — use /index to manage your private works'}"
+      status << "- **Private works DB**: #{has_private_db ? 'present' : 'not present — use /nota:index to manage your private works'}"
 
       if has_private_db
         begin

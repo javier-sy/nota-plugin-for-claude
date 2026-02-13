@@ -391,7 +391,7 @@ module NotaKnowledgeBase
           lines << "  (could not read stats: #{e})"
         end
       else
-        lines << "\nPrivate DB: not present (use /index to manage private works)"
+        lines << "\nPrivate DB: not present (use /nota:index to manage private works)"
       end
 
       lines.join("\n")

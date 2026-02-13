@@ -2,7 +2,7 @@
 
 Default creative dimensions for composition ideation. Each `##` section defines one dimension. The section title names the dimension; the body contains provocations and questions to expand the creative space.
 
-Customize this framework with `/inspiration_framework` to add, remove, or modify dimensions.
+Customize this framework with `/nota:inspiration_framework` to add, remove, or modify dimensions.
 
 ## Structure
 

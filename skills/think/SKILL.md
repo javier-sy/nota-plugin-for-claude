@@ -1,5 +1,5 @@
 ---
-name: musa-think
+name: think
 description: >-
   Use this skill when the user wants to brainstorm ideas for a new composition,
   explore creative directions, get inspiration, think about what to compose,
@@ -91,22 +91,22 @@ When previous analyses are available, detect patterns: "Your last three pieces a
 ## Critical Guards
 
 - **NEVER show unverified code** — this is the most important rule. Every code fragment, class name, method call, or parameter you mention MUST be verified against the knowledge base first (`search`, `api_reference`, `pattern`). If you cannot verify it, describe the idea in musical/conceptual terms only. The user must never experience the frustration of trying an idea that fails because a class, method, or parameter doesn't exist.
-- **Ideas can be wild; code must be correct** — be as provocative and creative as you want with musical concepts, aesthetic directions, and compositional strategies. But the moment you map an idea to MusaDSL code, that code must be accurate. When in doubt, leave the code to `/code` and describe the idea conceptually.
+- **Ideas can be wild; code must be correct** — be as provocative and creative as you want with musical concepts, aesthetic directions, and compositional strategies. But the moment you map an idea to MusaDSL code, that code must be accurate. When in doubt, leave the code to `/nota:code` and describe the idea conceptually.
 - **Use WebSearch** for external references — composers, techniques, traditions. Don't rely on general knowledge alone.
-- **Never launch `/code` automatically** — thinking and coding are separate acts. Always leave a space for the user to reflect, choose, and refine before moving to implementation.
+- **Never launch `/nota:code` automatically** — thinking and coding are separate acts. Always leave a space for the user to reflect, choose, and refine before moving to implementation.
 - **Source references**: MCP tool results include GitHub URLs. When you need to examine source code in detail, use `WebFetch` to read from GitHub URLs — do NOT attempt to read local MusaDSL source paths.
 
 ## When MCP tools return setup errors
 
-If MCP tool results mention "not configured", "API key", or "/setup":
+If MCP tool results mention "not configured", "API key", or "/nota:setup":
 
 1. **Stop immediately** — do NOT attempt to generate ideas without the knowledge base.
 2. **Tell the user** that the plugin needs to be configured first.
-3. **Suggest** they run `/setup` which will guide them through the process.
+3. **Suggest** they run `/nota:setup` which will guide them through the process.
 
 ## Important
 
 - **The think journal is the persistent output** — creative thinking is persisted to `think-journal.md` via the think-journal rule. This skill explicitly updates the journal as step 13.
-- **When the user is ready to implement**, suggest `/code` to move from ideas to working code.
+- **When the user is ready to implement**, suggest `/nota:code` to move from ideas to working code.
 - **Tone is provocative and open** — questions, possibilities, "what if" — not directives.
 - **Don't be exhaustive** — better to offer 5 vivid ideas than 20 generic ones. Quality over quantity.

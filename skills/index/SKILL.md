@@ -35,7 +35,7 @@ When the user provides a path to a composition project.
 
 Call the `add_work` MCP tool with the `work_path` parameter (absolute path to the composition project directory).
 
-After success, mention that the work now appears in `search` (kind: `"all"` or `"private_works"`) and `similar_works` results. Suggest using `/analyze` to generate a deeper musical analysis of the work, or `/code` to modify the composition.
+After success, mention that the work now appears in `search` (kind: `"all"` or `"private_works"`) and `similar_works` results. Suggest using `/nota:analyze` to generate a deeper musical analysis of the work, or `/nota:code` to modify the composition.
 
 ### Update a work
 
@@ -78,4 +78,4 @@ Files under `vendor/` and `.bundle/` are excluded. The work name is the basename
 
 - **Do NOT search the knowledge base** — this skill manages the index, it doesn't query it. For searching, the user should ask questions normally and the MCP tools will handle it.
 - **Ask for confirmation** before removing works.
-- If the user asks about plugin configuration or API key issues, redirect to `/setup`.
+- If the user asks about plugin configuration or API key issues, redirect to `/nota:setup`.

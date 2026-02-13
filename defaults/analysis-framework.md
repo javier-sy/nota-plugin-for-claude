@@ -2,7 +2,7 @@
 
 Default analytical dimensions for composition analysis. Each `##` section defines one dimension. The section title names the dimension; the body instructs what to analyze.
 
-Customize this framework with `/analysis_framework` to add, remove, or modify dimensions.
+Customize this framework with `/nota:analysis_framework` to add, remove, or modify dimensions.
 
 ## Formal Structure
 

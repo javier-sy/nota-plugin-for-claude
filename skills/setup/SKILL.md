@@ -49,16 +49,16 @@ Explain that the knowledge base should auto-download on session start. Suggest:
 
 Tell the user that the plugin is fully configured and ready. Then suggest:
 
-- `/hello` — for a welcome and full overview of the plugin's capabilities
-- `/explain` — to ask about any MusaDSL concept
-- `/code` — to program or modify MusaDSL compositions
-- `/think` — to brainstorm ideas for new compositions
-- `/index` — to manage their private works (add, list, update, remove compositions)
-- `/analyze` — to generate a structured musical analysis of a composition
-- `/analysis_framework` — to view or customize the analytical dimensions
-- `/inspiration_framework` — to view or customize the creative dimensions
+- `/nota:hello` — for a welcome and full overview of the plugin's capabilities
+- `/nota:explain` — to ask about any MusaDSL concept
+- `/nota:code` — to program or modify MusaDSL compositions
+- `/nota:think` — to brainstorm ideas for new compositions
+- `/nota:index` — to manage their private works (add, list, update, remove compositions)
+- `/nota:analyze` — to generate a structured musical analysis of a composition
+- `/nota:analysis_framework` — to view or customize the analytical dimensions
+- `/nota:inspiration_framework` — to view or customize the creative dimensions
 
-If the `check_setup` results show a private works database is present, mention how many chunks it contains. If not present, briefly mention that the user can optionally index their own compositions with `/index`.
+If the `check_setup` results show a private works database is present, mention how many chunks it contains. If not present, briefly mention that the user can optionally index their own compositions with `/nota:index`.
 
 ## Security
 

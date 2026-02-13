@@ -8,7 +8,7 @@ version: 0.1.0
 
 # Manage Inspiration Framework
 
-View, customize, or reset the inspiration framework that defines the creative dimensions used by `/think`.
+View, customize, or reset the inspiration framework that defines the creative dimensions used by `/nota:think`.
 
 ## Process
 
@@ -56,6 +56,6 @@ When the user wants to go back to the default framework.
 - The default framework has 9 dimensions: Structure, Time, Pitch, Algorithm, Texture, Instrumentation, Reference, Dialogue, Constraint.
 - The tone is provocative — questions ("What if...?"), possibilities, explorations — not instructions or checklists.
 - User customizations are stored at `~/.config/nota/inspiration-framework.md`.
-- Changes to the framework affect future `/think` sessions but do not retroactively change anything (ideation is ephemeral).
-- The inspiration framework is independent from the analysis framework (`/analysis_framework`). They serve different purposes and evolve separately.
+- Changes to the framework affect future `/nota:think` sessions but do not retroactively change anything (ideation is ephemeral).
+- The inspiration framework is independent from the analysis framework (`/nota:analysis_framework`). They serve different purposes and evolve separately.
 - **Do NOT call `get_inspiration_framework` for informational purposes** — only call it when the user is actively working with the framework (viewing, modifying, or resetting).
