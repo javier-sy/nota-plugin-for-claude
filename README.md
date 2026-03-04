@@ -23,6 +23,9 @@ Inside Claude Code, run:
 
 ```
 /plugin marketplace add javier-sy/nota-plugin-for-claude
+```
+
+```
 /plugin install nota@yeste.studio
 ```
 
