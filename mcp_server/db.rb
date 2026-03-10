@@ -30,7 +30,7 @@ module NotaKnowledgeBase
       File.join(__dir__, "knowledge.db")
     end
 
-    STABLE_PRIVATE_DB_DIR = File.join(Dir.home, ".config", "nota")
+    STABLE_PRIVATE_DB_DIR = File.join(Dir.home, ".config", "nota-plugin-for-claude")
 
     def default_private_db_path
       env_path = ENV["PRIVATE_DB_PATH"]

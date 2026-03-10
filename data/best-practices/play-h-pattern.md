@@ -23,6 +23,26 @@ end
 control.after { launch :next_section }
 ```
 
+## Variant: HC() for cyclic hash series
+
+When component series have different lengths, use `HC()` instead of `H()`. `HC()` repeats shorter series cyclically to match the longest one, so a 3-value duration pattern cycles against an 8-value grade series without running out.
+
+```ruby
+# HC() — shorter series repeat cyclically to match the longest
+melody = HC(
+  grade: S(0, 2, 4, 5, 7, 9, 11, 12),    # 8 values
+  duration: S(1/4r, 1/8r, 1/8r),           # 3 values — cycles: 1/4, 1/8, 1/8, 1/4, 1/8, ...
+  velocity: S(80, 70)                       # 2 values — cycles: 80, 70, 80, 70, ...
+)
+
+control = play(melody) do |note|
+  pitch = scale[note[:grade]].pitch
+  v(0).note pitch: pitch, velocity: note[:velocity], duration: note[:duration]
+end
+```
+
+Note: with `H()`, the serie ends when the shortest component ends. With `HC()`, it ends when the longest component ends (others cycle).
+
 ## Anti-pattern
 
 ```ruby

@@ -520,7 +520,7 @@ module NotaKnowledgeBase
       end
 
       # 7. Best practices
-      bp_dir = File.join(source_root, "nota", "data", "best-practices")
+      bp_dir = File.join(source_root, "nota-plugin-for-claude", "data", "best-practices")
       if File.directory?(bp_dir)
         Dir.glob(File.join(bp_dir, "*.md")).sort.each do |md_file|
           rel = relative_path(md_file, source_root)

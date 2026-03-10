@@ -1,5 +1,5 @@
 ---
-name: analysis_framework
+name: analysis-framework
 description: >-
   Use this skill when the user wants to view, modify, or reset the analysis
   framework that guides composition analysis dimensions.

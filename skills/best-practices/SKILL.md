@@ -1,5 +1,5 @@
 ---
-name: best_practices
+name: best-practices
 description: >-
   Use this skill when the user wants to manage best practices for MusaDSL
   composition — generate from analyses, add manually, list, edit, remove,

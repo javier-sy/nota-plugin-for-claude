@@ -9,7 +9,7 @@
       "name": "nota",
       "source": "./",
       "description": "Nota — MusaDSL composition assistant: learn the framework, code compositions, explore ideas, analyze music",
-      "version": "0.9.1"
+      "version": "0.10.0"
     }
   ]
 }

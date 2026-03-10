@@ -52,7 +52,7 @@ Generates ideas for new compositions or explores new directions for existing one
 - **MusaDSL knowledge** — to ensure every idea maps to concrete, implementable tools and patterns
 - **WebSearch** — to connect ideas to composers, techniques, and traditions with accurate references
 
-The default **inspiration framework** has 9 dimensions: Structure, Time, Pitch, Algorithm, Texture, Instrumentation, Reference, Dialogue, and Constraint. Customize them with `/nota:inspiration_framework`.
+The default **inspiration framework** has 9 dimensions: Structure, Time, Pitch, Algorithm, Texture, Instrumentation, Reference, Dialogue, and Constraint. Customize them with `/nota:inspiration-framework`.
 
 ### `/nota:code` — Composition coding
 
@@ -74,7 +74,7 @@ Use `/nota:index` to add, update, remove, and list indexed compositions.
 
 Reads your code, interprets it musically, and produces a detailed structured analysis. The analysis is stored as searchable knowledge, enriching future searches, `/nota:think` ideation, and `/nota:code` references. This transforms search from "what does the code say" to "what does the code do musically."
 
-The default **analysis framework** has 10 dimensions: Formal Structure, Harmonic and Modal Language, Rhythmic and Temporal Strategy, Generative Strategy, Texture and Instrumentation, Idiomatic Usage and Special Features, Relation to Other Artists, Notable Technical Patterns, Coding Best Practices, and Conclusion. Customize them with `/nota:analysis_framework`.
+The default **analysis framework** has 10 dimensions: Formal Structure, Harmonic and Modal Language, Rhythmic and Temporal Strategy, Generative Strategy, Texture and Instrumentation, Idiomatic Usage and Special Features, Relation to Other Artists, Notable Technical Patterns, Coding Best Practices, and Conclusion. Customize them with `/nota:analysis-framework`.
 
 Removing a work with `/nota:index` also removes its associated analysis.
 
@@ -87,7 +87,7 @@ Manages best practices for MusaDSL composition projects. Practices can be:
 - **Listed, edited, removed** — full CRUD for your practice catalog
 
 Two layers:
-- **General practices** ship with the plugin (12 practices covering project structure, runtime patterns, and coding style), indexed in `knowledge.db` and searchable via `search` with `kind: "best_practice"`.
+- **General practices** ship with the plugin (23 practices covering project structure, runtime patterns, coding style, neumas, generative techniques, and integration patterns), indexed in `knowledge.db` and searchable via `search` with `kind: "best_practice"`.
 - **User practices** are private, stored in `~/.config/nota/best-practices/`, indexed in `private.db`.
 
 `/nota:code` automatically searches best practices during its research step, so your consolidated patterns are applied when writing new code.
@@ -98,15 +98,15 @@ Two layers:
 |-------|---------|
 | `/nota:hello` | Welcome and capabilities overview |
 | `/nota:setup` | Plugin configuration and troubleshooting |
-| `/nota:analysis_framework` | View, customize, or reset the analysis dimensions |
-| `/nota:inspiration_framework` | View, customize, or reset the creative dimensions |
+| `/nota:analysis-framework` | View, customize, or reset the analysis dimensions |
+| `/nota:inspiration-framework` | View, customize, or reset the creative dimensions |
 
 ## The Creative Cycle
 
 The plugin supports a continuous creative cycle where each step feeds into the next:
 
 ```
-/nota:think ──→ /nota:code ──→ /nota:index ──→ /nota:analyze ──╮
+/nota:think ──→ /nota:code ──→ /nota:index ──→ /nota:analyze ───╮
   ↑                 ↑                              │            │
   │                 │                              ╰──→ /nota:best-practices
   │                 │                                           │
@@ -206,9 +206,9 @@ nota/
 │   ├── think/               # /nota:think skill — creative ideation and brainstorming
 │   ├── index/               # /nota:index skill — manage private works index
 │   ├── analyze/             # /nota:analyze skill — structured composition analysis
-│   ├── best_practices/      # /nota:best-practices skill — manage best practices
-│   ├── analysis_framework/  # /nota:analysis_framework skill — manage analysis dimensions
-│   ├── inspiration_framework/ # /nota:inspiration_framework skill — manage inspiration dimensions
+│   ├── best-practices/      # /nota:best-practices skill — manage best practices
+│   ├── analysis-framework/  # /nota:analysis-framework skill — manage analysis dimensions
+│   ├── inspiration-framework/ # /nota:inspiration-framework skill — manage inspiration dimensions
 │   └── setup/               # /nota:setup skill — configuration and troubleshooting
 ├── defaults/                # Default configuration files
 │   ├── analysis-framework.md      # Default analysis framework (10 dimensions)
@@ -217,7 +217,7 @@ nota/
 │   ├── musadsl-reference.md       # Condensed API reference
 │   └── best-practices.md         # Condensed best practices reference
 ├── data/
-│   ├── best-practices/      # Global best practice source files (12 .md files)
+│   ├── best-practices/      # Global best practice source files (23 .md files)
 │   └── chunks/              # Generated JSONL chunks + manifest
 ├── prompts/                 # Regeneration prompts for maintainers
 │   └── regenerate-reference.md        # How to regenerate musadsl-reference.md

@@ -19,11 +19,11 @@ Present a warm welcome and a comprehensive overview of what the plugin provides.
 
 3. **Explain what the plugin does** — briefly:
 
-   The plugin provides 9 interactive skills covering the entire creative process — from understanding the framework, through brainstorming ideas, to writing verified code and analyzing the results.
+   The plugin provides 10 interactive skills covering the entire creative process — from understanding the framework, through brainstorming ideas, to writing verified code, analyzing the results, and consolidating best practices.
 
    Everything is backed by a knowledge base with MusaDSL documentation, API reference, and 23 demo projects. Optionally, the user can index their own compositions and their musical analyses, which enriches all skills.
 
-4. **Present the 5 core skills** — explain each one briefly, in this order:
+4. **Present the 6 core skills** — explain each one briefly, in this order:
 
    **`/nota:explain`** — Semantic search. Ask about any MusaDSL concept and get an accurate, sourced answer. Retrieves relevant documentation, API details, and code examples from the knowledge base.
 
@@ -33,7 +33,7 @@ Present a warm welcome and a comprehensive overview of what the plugin provides.
    - **MusaDSL knowledge** — to ensure every idea maps to concrete, implementable tools and patterns
    - **WebSearch** — to connect ideas to composers, techniques, and traditions
 
-   Customize the dimensions with `/nota:inspiration_framework`.
+   Customize the dimensions with `/nota:inspiration-framework`.
 
    **`/nota:code`** — Composition coding. Translates musical intentions into working MusaDSL Ruby code. Can create new compositions from scratch or modify existing ones, drawing from:
    - **MusaDSL knowledge** — API reference, documentation, patterns, and demo examples to verify every method call
@@ -46,7 +46,14 @@ Present a warm welcome and a comprehensive overview of what the plugin provides.
 
    **`/nota:analyze`** — Musical analysis. Reads the code, interprets it musically, and produces a detailed structured analysis across 10 configurable dimensions: Formal Structure, Harmonic and Modal Language, Rhythmic and Temporal Strategy, Generative Strategy, Texture and Instrumentation, Idiomatic Usage and Special Features, Relation to Other Artists, Notable Technical Patterns, Coding Best Practices, and Conclusion. The analysis is stored as searchable knowledge that enriches future `/nota:think` ideation and `/nota:code` references.
 
-   Customize the dimensions with `/nota:analysis_framework`.
+   Customize the dimensions with `/nota:analysis-framework`.
+
+   **`/nota:best-practices`** — Best practices management. Manages reusable composition patterns and conventions. Practices can be:
+   - **Generated from analyses** — `/nota:analyze` marks `[consolidation candidate]` patterns; this skill extracts and formalizes them
+   - **Added manually** — the user describes a practice and the skill structures it with description, example, and optional anti-pattern
+   - **Listed, edited, or removed** — full CRUD over the user's practice library
+
+   Two layers: **global practices** ship with the plugin (proven MusaDSL patterns); **user practices** are private, extracted from the user's own creative practice. Both are searchable, and `/nota:code` automatically consults them when writing code.
 
 5. **Explain the complete creative cycle:**
 
@@ -54,15 +61,18 @@ Present a warm welcome and a comprehensive overview of what the plugin provides.
 
    ```
    /nota:think ──→ /nota:code ──→ /nota:index ──→ /nota:analyze ──╮
-     ↑                                          │
-     ╰──────────────────────────────────────────╯
+     ↑                                                            │
+     │              /nota:best-practices ◄────────────────────────┤
+     │                      │                                     │
+     ╰──────────────────────┴─────────────────────────────────────╯
    ```
 
    - **`/nota:think`** (ideation) — generates ideas drawing from the inspiration framework, MusaDSL knowledge, and the user's previous analyses and works. The more the user has composed and analyzed, the richer the ideation becomes.
-   - **`/nota:code`** (composition) — implements ideas as working MusaDSL code, verified against the knowledge base and informed by similar works.
+   - **`/nota:code`** (composition) — implements ideas as working MusaDSL code, verified against the knowledge base, informed by similar works, and guided by best practices.
    - **`/nota:index`** (knowledge building) — stores the composition's code, making it searchable and available for future reference by all other skills.
-   - **`/nota:analyze`** (reflection) — reads the code, interprets it musically, and stores the analysis as searchable knowledge.
-   - Back to **`/nota:think`** — the new analysis enriches future ideation: patterns detected across works, unexplored directions, dialogue with composers.
+   - **`/nota:analyze`** (reflection) — reads the code, interprets it musically, and stores the analysis as searchable knowledge. Marks `[consolidation candidate]` patterns worth extracting as best practices.
+   - **`/nota:best-practices`** (consolidation) — extracts recurring patterns from analyses into formalized, reusable practices. These feed back into `/nota:code` (which consults them automatically) and `/nota:think` (which draws from the accumulated creative practice).
+   - Back to **`/nota:think`** — the new analysis and practices enrich future ideation: patterns detected across works, unexplored directions, dialogue with composers.
 
    The two databases are the memory of this cycle:
    - **`knowledge.db`** holds MusaDSL knowledge (what is possible)
@@ -76,8 +86,8 @@ Present a warm welcome and a comprehensive overview of what the plugin provides.
    |-------|---------|
    | `/nota:hello` | This welcome and capabilities overview |
    | `/nota:setup` | Plugin configuration and troubleshooting |
-   | `/nota:analysis_framework` | View, customize, or reset the analysis dimensions |
-   | `/nota:inspiration_framework` | View, customize, or reset the creative dimensions |
+   | `/nota:analysis-framework` | View, customize, or reset the analysis dimensions |
+   | `/nota:inspiration-framework` | View, customize, or reset the creative dimensions |
 
 ## Important
 
