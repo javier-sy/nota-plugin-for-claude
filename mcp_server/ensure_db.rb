@@ -25,7 +25,7 @@ require "fileutils"
 
 module NotaKnowledgeBase
   module EnsureDB
-    GITHUB_REPO = "javier-sy/nota-plugin-for-claude-plugin-for-claude"
+    GITHUB_REPO = "javier-sy/nota-plugin-for-claude"
     RELEASE_API_URL = URI("https://api.github.com/repos/#{GITHUB_REPO}/releases/latest")
     CHECK_INTERVAL_SECONDS = 24 * 60 * 60  # 24 hours
 
