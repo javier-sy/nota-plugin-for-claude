@@ -91,7 +91,7 @@ transport.start  # blocks until clock terminates
 | `RND` | `RND(*values, values: nil, from: nil, to: nil, step: nil, random: nil)` | Random infinite |
 | `RND1` | `RND1(*values, values: nil, from: nil, to: nil, step: nil, random: nil)` | Single random value then exhausts |
 | `SIN` | `SIN(start_value: nil, steps: nil, amplitude: nil, center: nil)` | Sine wave; finite (steps iterations) |
-| `FIBO` | `FIBO()` | Fibonacci: 0, 1, 1, 2, 3, 5, 8... (infinite) |
+| `FIBO` | `FIBO(first = 1, second = 1)` | Fibonacci: 1, 1, 2, 3, 5, 8... The seeds ARE the first two values: `FIBO(0, 1)` includes the leading zero, `FIBO(2, 1)` gives the Lucas numbers (infinite) |
 | `HARMO` | `HARMO(error: nil, extended: nil)` | Harmonic series as MIDI semitones (infinite) |
 | `NIL` | `NIL()` | Always returns nil |
 | `UNDEFINED` | `UNDEFINED()` | Placeholder (undefined state) |
@@ -796,7 +796,7 @@ transport.start
 
 13. **`RND()` is infinite** (never exhausts). Use `.max_size(n)` to limit. `RND1()` returns a single value then exhausts.
 
-14. **`FIBO()` starts at 0**: sequence is 0, 1, 1, 2, 3, 5, 8, 13... (not 1, 1, 2, 3...).
+14. **`FIBO()` starts at 1**: the sequence is 1, 1, 2, 3, 5, 8, 13... For the version with the leading zero, seed it: `FIBO(0, 1)`. The seeds are the first two values, so `FIBO(a, b)` yields a, b, a+b, ...
 
 15. **`move` uses `every:` as a keyword**, not a positional parameter. Write `move(every: 1/4r, from: 0, to: 127, duration: 4r)`, not `move(1/4r, ...)`.
 

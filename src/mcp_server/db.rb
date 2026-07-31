@@ -192,13 +192,50 @@ module NotaKnowledgeBase
       end
     end
 
+    # How many neighbours to ask sqlite-vec for, given that the kind filter is
+    # applied AFTER the search.
+    #
+    # It has to be applied after: vec0 tables carry no metadata columns
+    # (see the schema above), so the filter cannot go inside the MATCH. That
+    # makes this a matter of CORRECTNESS, not of tuning, because the corpus is
+    # heavily skewed -- `api` is around two thirds of it and `docs` around a
+    # thirtieth. Asking for the ten nearest chunks overall and then keeping the
+    # `docs` ones returned NOTHING for any docs query, however well that
+    # collection was embedded: the whole conceptual layer of the documentation
+    # was unreachable while appearing to be indexed.
+    #
+    # So over-fetch in inverse proportion to the kind's share of the corpus: a
+    # minority kind gets the same chance of filling its results as a majority
+    # one. The table is small and a large `k` costs almost nothing.
+    KNN_OVERSHOOT = 3
+
+    def knn_fetch_limit(db, kind, n_results)
+      return n_results * 3 if kind == "all"
+
+      counts = kind_counts(db)
+      total = counts.values.sum
+      of_kind = counts[kind].to_i
+
+      return n_results * 2 if total.zero? || of_kind.zero?
+
+      [(n_results * KNN_OVERSHOOT * total.to_f / of_kind).ceil, total].min
+    end
+
+    # Chunks per kind, read once per database.
+    def kind_counts(db)
+      @kind_counts ||= {}
+      @kind_counts[db.object_id] ||=
+        db.execute("SELECT kind, COUNT(*) AS n FROM chunks GROUP BY kind")
+          .to_h { |row| [row["kind"], row["n"]] }
+    end
+
     # Low-level KNN search: takes a pre-computed embedding, returns raw result hashes.
     # Does NOT call Voyage — caller is responsible for embedding the query.
     def knn_search(db, query_embedding, kind: "all", n_results: 5)
       vec_blob = query_embedding.pack("f*")
 
       # Over-fetch to allow filtering, then trim to n_results
-      fetch_limit = kind == "all" ? n_results * 3 : n_results * 2
+      fetch_limit = knn_fetch_limit(db, kind, n_results)
 
       # KNN search via sqlite-vec
       knn_rows = db.execute(
