@@ -12,6 +12,22 @@ Regenerate the file `rules/musadsl-reference.md` — the condensed MusaDSL API r
 
 Read ALL of the following before writing. Do not skip any file.
 
+### Primary: the idiom catalogue
+
+```
+MusaDSL/musa-dsl/docs/idioms.md
+```
+
+Fifteen entries organised by symptom — the generalist reflex, the MusaDSL form, and what capability the form buys. It is the answer to "how would this be expressed most beautifully in MusaDSL", and the reference should agree with it wherever they touch.
+
+### Primary: the specs
+
+```
+MusaDSL/musa-dsl/spec/
+```
+
+`inline_doc_*_spec.rb` and `docs_*_spec.rb` assert what the documentation examples do; the rest assert what the library does. They are the only layer capable of failing when it lies, which is what makes them the source for every behavioural claim (see content principle 1).
+
 ### Primary: musa-dsl documentation (docs/)
 
 ```
@@ -82,7 +98,13 @@ Write a single markdown file: `rules/musadsl-reference.md`
 
 ### Content principles
 
-1. **Accuracy over brevity** — Every method signature, parameter name, and default value must match the source code. When docs and code disagree, the code is authoritative.
+1. **Every claim about behaviour comes from a spec that passes.** Signatures, parameter names and defaults are read from the source. *Behaviour* is not: it is read from `spec/`, and a claim that cannot be traced to a passing spec either gets one written or does not get made.
+
+   This is not pedantry, it is the lesson of a specific failure. `FIBO()`'s YARD example said the series started at 0; `docs/subsystems/series.md` repeated it; and this reference ended up stating it **as a pitfall to avoid** — *"`FIBO()` starts at 0 … (not 1, 1, 2, 3...)"* — which is the strongest form of assertion there is. The series had always started at 1. Three layers, one error, and none of them ran it. Condensing is also editorialising, and editorialising a falsehood turns it into a rule.
+
+   "Read the code" is not the fix: reading the code is exactly what produced that chain. The code is authoritative over the docs when they disagree, but *neither* is authoritative over a spec — and `bundle exec rspec` is what tells you which.
+
+   `spec/doc_examples_spec.rb` runs every `@example` in the library and checks every output declared with `# =>`. Where it reports a verified claim, that claim can be repeated here. Where it reports prose, the claim is unverified: check it, or leave it out.
 
 2. **Condensed, not summarized** — This is a reference, not a tutorial. Use tables for enumerations (constructors, operations, scales, clocks). Use code blocks for signatures and minimal usage examples. Omit narrative explanations that don't add information beyond the code itself.
 
@@ -90,7 +112,11 @@ Write a single markdown file: `rules/musadsl-reference.md`
 
 4. **Practical code examples** — For each subsystem, include at least one minimal working example showing typical usage. Examples should be correct and runnable.
 
-5. **Pitfalls and critical warnings** — Preserve and update the "Common Pitfalls" section. These are high-value for preventing LLM errors. Add new pitfalls discovered in the source.
+5. **Every pitfall cites the spec that demonstrates it.** The "Common Pitfalls" section is where a mistake does the most damage, because emphasis multiplies it: a warning is read as settled fact and copied without checking. So each entry ends with the spec file and example name that proves it, and an entry without one does not go in.
+
+   A warning with no spec behind it is a conjecture with typography. Three of the sixteen pitfalls in the previous version were false — `RND()` announced as infinite when it is a shuffle that exhausts, `duration: nil` offered as the way to hold a note when it raises, series constructors declared unavailable inside DSL blocks where they work — and each had been sitting there being trusted.
+
+   Do not preserve an entry merely because it was there before. Re-verify it or drop it.
 
 ### Structure
 
@@ -133,6 +159,6 @@ Follow this section order (same as the current version, with additions as needed
 
 1. Read all primary sources (docs + source code) in parallel where possible
 2. Read secondary sources (gem READMEs)
-3. Cross-reference docs against source code to verify accuracy
+3. Cross-reference docs against source code, and both against the specs. Run `bundle exec rspec` first: whatever it does not cover, this reference cannot claim
 4. Write the complete `rules/musadsl-reference.md`
 5. After writing, verify: are there any public classes/modules in the source that have no coverage in the reference? If so, add them.

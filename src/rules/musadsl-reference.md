@@ -88,7 +88,7 @@ transport.start  # blocks until clock terminates
 | `AC` | `AC(*series)` | Array combined (cycles all series) |
 | `FOR` | `FOR(from: nil, to: nil, step: nil)` | Numeric range; step sign auto-adjusted |
 | `MERGE` | `MERGE(*series)` | Sequential concatenation |
-| `RND` | `RND(*values, values: nil, from: nil, to: nil, step: nil, random: nil)` | Random infinite |
+| `RND` | `RND(*values, values: nil, from: nil, to: nil, step: nil, random: nil)` | Random SHUFFLE: each value once, then ends. `.repeat` for replacement (see pitfall 9) |
 | `RND1` | `RND1(*values, values: nil, from: nil, to: nil, step: nil, random: nil)` | Single random value then exhausts |
 | `SIN` | `SIN(start_value: nil, steps: nil, amplitude: nil, center: nil)` | Sine wave; finite (steps iterations) |
 | `FIBO` | `FIBO(first = 1, second = 1)` | Fibonacci: 1, 1, 2, 3, 5, 8... The seeds ARE the first two values: `FIBO(0, 1)` includes the leading zero, `FIBO(2, 1)` gives the Lucas numbers (infinite) |
@@ -103,7 +103,7 @@ transport.start  # blocks until clock terminates
 |---|---|
 | `.i` | Create instance (required before iterating) |
 | `.next_value` | Get next value (on instance) |
-| `.to_a` / `.to_a(limit: n)` | Collect all values (use limit for infinite series) |
+| `.to_a` | Collect all values, restarting the instance. There is no `limit:`; bound an infinite serie with `.max_size(n)` first |
 | `.map(isolate_values: nil, &block)` | Transform each value |
 | `.select(&block)` | Keep matching values |
 | `.remove(&block)` | Remove matching values (history available via `\|v, history\|`) |
@@ -213,7 +213,7 @@ play serie,
      **mode_args do |key1:, key2:, control:|
   # hash keys become keywords; control: optional
 end
-play serie, mode: :at do |note:, at:| ... end
+play serie, mode: :at do |note:, at:| ... end   # OFF BY ONE, see pitfall 13
 play serie, mode: :neumalang, decoder: decoder do |gdv| ... end
 
 # Timed series (elements carry :time attribute)
@@ -568,12 +568,12 @@ voice  = voices.voices[0]
 voice.note(60, velocity: 100, duration: 1/4r)             # positional pitch
 voice.note pitch: 60, velocity: 100, duration: 1/4r       # keyword pitch
 voice.note pitch: [60, 64, 67], velocity: 90, duration: 1r  # chord
-voice.note pitch: 60, velocity: 80, duration: nil,          # indefinite → NoteControl
+voice.note pitch: 60, velocity: 80, duration: 100r,         # duration: nil RAISES, see pitfall 12
              note_duration: nil, duration_offset: nil,      # articulation overrides
              velocity_off: 64
 
-# Manual note off
-note_ctrl = voice.note(pitch: 64, velocity: 80, duration: nil)
+# Manual note off: hold with a duration longer than the passage and release early
+note_ctrl = voice.note(pitch: 64, velocity: 80, duration: 100r)
 note_ctrl.on_stop { puts "Note ended!" }
 note_ctrl.note_off(velocity: 64)
 
@@ -770,37 +770,42 @@ transport.start
 
 ## Common Pitfalls
 
-1. **`using Musa::Extension::Neumas` is file-scoped.** Declaring it in `main.rb` does NOT make `.to_neumas` available in `score.rb`. Declare in every file that uses it.
+Every entry below is demonstrated by an example in `musa-dsl/spec/reference_pitfalls_spec.rb`, named after the entry. A warning with no spec behind it is a conjecture with typography, so it does not go here — and three of the warnings this list used to carry were false.
 
-2. **Series are lazy, not iterable.** Series have no `.each`. Use `.next_value` (on instance), `play` in sequencer, or `.to_a` to collect. Always call `.i` to create an instance before iterating.
+1. **`using Musa::Extension::Neumas` is file-scoped.** Declaring it in `main.rb` does NOT make `.to_neumas` available in `score.rb`. Declare it in every file that uses it. *(spec: "refinements are file-scoped")*
 
-3. **Neuma durations are multiples of base_duration, not fractions of a bar.** If `base_duration: 1/4r`, then `1` = quarter note, `2` = half note, `1/2` = eighth note. If `base_duration: 1r`, then `1/4` = quarter note.
+2. **Series are lazy, and a prototype cannot be read.** Series have no `.each`. Call `.i` for an instance, then `.next_value`, or hand the serie to `play`. Note that `.to_a` **restarts** the instance rather than continuing from where `next_value` left off. *(spec: "a serie is lazy")*
 
-4. **Use Rational for timing.** Prefer `1/4r`, `1r`, `3/4r` over `0.25`, `1.0`, `0.75` to avoid floating-point imprecision in the sequencer.
+3. **Neuma durations are multiples of `base_duration`, never fractions of a bar.** With `base_duration: 1/4r`, `1` is a quarter; with `base_duration: 1r`, the same `1` is a whole bar. *(spec: "neuma durations are multiples of base_duration")*
 
-5. **Ornaments require a Transcriptor.** Without `FromGDV::ToMIDI.transcription_set` passed to the decoder, ornament annotations (`tr`, `mor`, `st`, `turn`) are silently ignored.
+4. **Use Rational for timing.** A Float position is rounded to the nearest tick: `at(1.3)` fires at `125/96r`. Prefer `1/4r`, `1r`, `3/4r`. *(spec: "a Float position is quantised to the tick grid")*
 
-6. **TimerClock requires external activation.** `transport.start` blocks but the clock is paused. You must call `clock.start` from a separate thread. Common pattern: `transport.before_begin { Thread.new { sleep 0.1; clock.start } }`.
+5. **Ornaments need a Transcriptor, and are silent without one.** The annotation survives on the event — `tr: true` is still there — and nothing acts on it: two events instead of five. Apply the transcriptor with `.process_with { |gdv| transcriptor.transcript(gdv) }`. *(spec: "without a transcriptor an ornament survives as an annotation")*
 
-7. **`after` callback does NOT fire on manual `.stop`.** Use `on_stop` for cleanup that must always run. Use `after` only for chaining sections on natural completion.
+6. **`after` fires only on natural completion; `on_stop` fires on any ending.** Use `on_stop` for cleanup that must always run, `after` for chaining sections. *(spec: "after fires on natural completion, on_stop on any ending")*
 
-8. **Series constructors are not available inside DSL blocks.** Define `S()`, `H()`, `FOR()`, etc. outside `sequencer.with do ... end` blocks, or use the fully-qualified form `Musa::Series::S(...)`.
+7. **MIDI channels are 0-indexed (0–15)**, not 1–16. *(spec: "MIDI channels are 0-indexed")*
 
-9. **Rules `history` is always `[]` with a single seed.** Use cumulative state in the object (e.g., arrays) and check `object.size` in `ended_when`, not `history.size`.
+8. **`play` in its default `:wait` mode needs a `:duration` on every element.** Without it, every element fires in the same instant AND the control never completes, so neither `after` nor `on_stop` ever runs — a section chained with `after` stops the chain in silence. See musa-dsl issue #72. *(spec: "play in its default mode needs a :duration")*
 
-10. **Seed Rules with `[[value]]` (double array)** to prevent Ruby's arrayfy from flattening the seed array.
+9. **`RND()` is a shuffle, not a die.** Each value is drawn once and removed, so it yields a random permutation and then ends: `RND(1..6)` gives six values and `nil` on the seventh, and `infinite?` is false. Sampling with replacement is `RND(...).repeat`, which reshuffles each pass and IS infinite. *(spec: "RND is a shuffle that exhausts")*
 
-11. **MIDI channels are 0-indexed (0–15)**, not 1–16.
+10. **`FIBO()` starts at 1**: 1, 1, 2, 3, 5, 8, 13… Its seeds are its first two values, so `FIBO(0, 1)` gives the version with the leading zero and `FIBO(a, b)` yields a, b, a+b, … *(spec: "FIBO starts at 1")*
 
-12. **`play` default mode is `:wait`** — each element must include `:duration` to determine timing between elements.
+11. **`move` takes `every:` as a keyword**, not positionally. `move(every: 1/4r, from: 0, to: 127, duration: 4r)`; the positional form raises ArgumentError. *(spec: "move takes every: as a keyword")*
 
-13. **`RND()` is infinite** (never exhausts). Use `.max_size(n)` to limit. `RND1()` returns a single value then exhausts.
+12. **`duration: nil` does not give an indefinite note — it raises.** `MIDIVoice#note` computes a note duration from it unconditionally. Until musa-dsl issue #81 is resolved, hold a note with a duration longer than the passage and release it early with `note_off`. *(spec: "the indefinite note the reference offers cannot be created")*
 
-14. **`FIBO()` starts at 1**: the sequence is 1, 1, 2, 3, 5, 8, 13... For the version with the leading zero, seed it: `FIBO(0, 1)`. The seeds are the first two values, so `FIBO(a, b)` yields a, b, a+b, ...
+13. **`mode: :at` is off by one element.** An element's `:at` schedules when the NEXT element is evaluated, not when that element plays: declared at 1, 5 and 9, the notes fire immediately, at bar 1 and at bar 5. An `:at` in the past silently ends the serie. See musa-dsl issue #82; prefer the default `:wait` mode with durations until it is fixed.
 
-15. **`move` uses `every:` as a keyword**, not a positional parameter. Write `move(every: 1/4r, from: 0, to: 127, duration: 4r)`, not `move(1/4r, ...)`.
+### Removed from this list
 
-16. **`note` pitch can be positional or keyword.** Both `voice.note(60, ...)` and `voice.note(pitch: 60, ...)` work; `duration: nil` means indefinite (returns NoteControl, must be stopped manually).
+Kept here so they are not reintroduced from an older copy:
+
+- ~~"Series constructors are not available inside DSL blocks"~~ — they are. `S()`, `H()` and the rest work inside `sequencer.with do … end`. *(spec: "series constructors DO work inside a DSL block")*
+- ~~"`RND()` is infinite (never exhausts)"~~ — the opposite; see 9.
+- ~~"`duration: nil` means indefinite"~~ — it raises; see 12.
+- The two Rules entries (`history` always `[]`, seed with `[[value]]`) described behaviour of an algorithm whose documentation and implementation disagree — musa-dsl issue #73. They return when that is decided.
 
 ## Demo Index
 
