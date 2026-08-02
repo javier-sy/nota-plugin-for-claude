@@ -150,7 +150,7 @@ voice2.next_value  # => 60 (independent)
 |---|---|---|
 | Grade | `0`, `+2`, `-1` (absolute or relative) | `(0)`, `(+2)`, `(-3)` |
 | Octave | `o0`, `o1`, `o-1` | `(0 o1 1 mf)` |
-| Duration | multiples of base_duration (e.g., `base_duration: 1/4r` → `1`=quarter, `2`=half, `1/2`=eighth, `1/4`=sixteenth) | `(0 1/2)` |
+| Duration | multiples of base_duration, which is itself a fraction of a **bar**: `1/4r` is a quarter of a bar, a quarter note **in 4/4 only** (in 3/4 a quarter note is `1/3r`) | `(0 1/2)` |
 | Velocity | `ppp pp p mp mf f ff fff` | `(0 1 mf)` |
 | Relative vel | `+f +ff -p -pp` | `(0 1 +f)` |
 | Ornaments | `tr` (trill), `mor` (mordent), `turn`, `st` (staccato) | `(0 1 mf tr)` |
@@ -776,7 +776,7 @@ Every entry below is demonstrated by an example in `musa-dsl/spec/reference_pitf
 
 2. **Series are lazy, and a prototype cannot be read.** Series have no `.each`. Call `.i` for an instance, then `.next_value`, or hand the serie to `play`. Note that `.to_a` **restarts** the instance rather than continuing from where `next_value` left off. *(spec: "a serie is lazy")*
 
-3. **Neuma durations are multiples of `base_duration`, never fractions of a bar.** With `base_duration: 1/4r`, `1` is a quarter; with `base_duration: 1r`, the same `1` is a whole bar. *(spec: "neuma durations are multiples of base_duration")*
+3. **Neuma durations are multiples of `base_duration`, and `base_duration` is itself a fraction of a bar.** With `base_duration: 1/4r`, `1` is a quarter of a bar; with `base_duration: 1r`, the same `1` is a whole bar. And a quarter of a bar is a quarter note **only in 4/4** — a bar and a whole note are the same length in no other meter, so in 3/4 a quarter note is `1/3r` and in 6/8 a beat is `1/6r`. *(spec: "neuma durations are multiples of base_duration")*
 
 4. **Use Rational for timing.** A Float position is rounded to the nearest tick: `at(1.3)` fires at `125/96r`. Prefer `1/4r`, `1r`, `3/4r`. *(spec: "a Float position is quantised to the tick grid")*
 
