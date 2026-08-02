@@ -213,7 +213,7 @@ play serie,
      **mode_args do |key1:, key2:, control:|
   # hash keys become keywords; control: optional
 end
-play serie, mode: :at do |note:, at:| ... end   # OFF BY ONE, see pitfall 13
+play serie, mode: :at do |note:, at:| ... end   # each element plays at its own :at
 play serie, mode: :neumalang, decoder: decoder do |gdv| ... end
 
 # Timed series (elements carry :time attribute)
@@ -568,7 +568,7 @@ voice  = voices.voices[0]
 voice.note(60, velocity: 100, duration: 1/4r)             # positional pitch
 voice.note pitch: 60, velocity: 100, duration: 1/4r       # keyword pitch
 voice.note pitch: [60, 64, 67], velocity: 90, duration: 1r  # chord
-voice.note pitch: 60, velocity: 80, duration: 100r,         # duration: nil RAISES, see pitfall 12
+voice.note pitch: 60, velocity: 80, duration: 1/4r,          # duration: nil = sounds until note_off
              note_duration: nil, duration_offset: nil,      # articulation overrides
              velocity_off: 64
 
@@ -786,7 +786,7 @@ Every entry below is demonstrated by an example in `musa-dsl/spec/reference_pitf
 
 7. **MIDI channels are 0-indexed (0–15)**, not 1–16. *(spec: "MIDI channels are 0-indexed")*
 
-8. **`play` in its default `:wait` mode needs a `:duration` on every element.** Without it, every element fires in the same instant AND the control never completes, so neither `after` nor `on_stop` ever runs — a section chained with `after` stops the chain in silence. See musa-dsl issue #72. *(spec: "play in its default mode needs a :duration")*
+8. **In `play`'s default `:wait` mode, an element with no `:duration` sounds at the same instant as the next one.** That is how a chord is written — `forward_duration: 0` says "the next one starts with this one" — but a serie of them has no length at all. `after` and `on_stop` do fire on such a play. *(spec: "elements with no duration all sound at once, and the control still completes")*
 
 9. **`RND()` is a shuffle, not a die.** Each value is drawn once and removed, so it yields a random permutation and then ends: `RND(1..6)` gives six values and `nil` on the seventh, and `infinite?` is false. Sampling with replacement is `RND(...).repeat`, which reshuffles each pass and IS infinite. *(spec: "RND is a shuffle that exhausts")*
 
@@ -794,9 +794,8 @@ Every entry below is demonstrated by an example in `musa-dsl/spec/reference_pitf
 
 11. **`move` takes `every:` as a keyword**, not positionally. `move(every: 1/4r, from: 0, to: 127, duration: 4r)`; the positional form raises ArgumentError. *(spec: "move takes every: as a keyword")*
 
-12. **`duration: nil` does not give an indefinite note — it raises.** `MIDIVoice#note` computes a note duration from it unconditionally. Until musa-dsl issue #81 is resolved, hold a note with a duration longer than the passage and release it early with `note_off`. *(spec: "the indefinite note the reference offers cannot be created")*
+12. **A note with no duration sounds until you release it.** `voice.note(60, duration: nil)` schedules no note-off; the control it returns is what ends it, with `note_off`. Releasing a note before its scheduled end works too, and its pending note-off then does nothing. *(spec: "a note with no duration sounds until it is released by hand")*
 
-13. **`mode: :at` is off by one element.** An element's `:at` schedules when the NEXT element is evaluated, not when that element plays: declared at 1, 5 and 9, the notes fire immediately, at bar 1 and at bar 5. An `:at` in the past silently ends the serie. See musa-dsl issue #82; prefer the default `:wait` mode with durations until it is fixed.
 
 ### Removed from this list
 
@@ -804,8 +803,8 @@ Kept here so they are not reintroduced from an older copy:
 
 - ~~"Series constructors are not available inside DSL blocks"~~ — they are. `S()`, `H()` and the rest work inside `sequencer.with do … end`. *(spec: "series constructors DO work inside a DSL block")*
 - ~~"`RND()` is infinite (never exhausts)"~~ — the opposite; see 9.
-- ~~"`duration: nil` means indefinite"~~ — it raises; see 12.
 - The two Rules entries (`history` always `[]`, seed with `[[value]]`) described behaviour of an algorithm whose documentation and implementation disagree — musa-dsl issue #73. They return when that is decided.
+- ~~"`mode: :at` is off by one element"~~ — it was, and it is not any more: each element plays at its own `:at`, and a position already gone by is played as due rather than dropping the rest of the serie. musa-dsl issue #82.
 
 ## Demo Index
 
