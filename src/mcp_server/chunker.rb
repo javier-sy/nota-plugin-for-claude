@@ -133,10 +133,14 @@ module NotaKnowledgeBase
       lines = source_text.lines
       definitions = extract_definitions(sexp)
 
+      private_from = private_regions(lines)
+
       chunks = []
       definitions.each_with_index do |defn, chunk_index|
         # Extract preceding comments
         comments = extract_preceding_comments(lines, defn[:start_line])
+
+        next if internal?(defn, comments, private_from)
 
         # Extract the definition text
         end_line = [defn[:end_line], lines.length].min
@@ -144,7 +148,7 @@ module NotaKnowledgeBase
 
         content_parts = []
         content_parts << comments unless comments.empty?
-        content_parts << node_text
+        content_parts << teaching_text(defn, node_text, comments)
         content = content_parts.join("\n")
 
         next if content.strip.length < 30
@@ -181,6 +185,73 @@ module NotaKnowledgeBase
       end
 
       chunks
+    end
+
+    # Which definitions are implementation rather than API.
+    #
+    # WHY. A chunk is retrieved by how its text reads, so a `_next_value` body
+    # sitting in the index answers questions about HOW something is built when
+    # what was asked is HOW TO USE it. Three ways a definition says it is
+    # internal, and all three are honoured:
+    #
+    #   * a leading underscore, which is this codebase's convention;
+    #   * living below a bare `private` in its class or module;
+    #   * `@api private` in its own documentation.
+    #
+    # An `@example` overrides all three. Somebody who writes one is teaching --
+    # `Datasets::Helper#velocity_of` is private and its example is the only place
+    # that says a velocity of 0 is `mp` -- and every one of them is executed and
+    # checked by musa-dsl's own doctest, so they are the most reliable text in
+    # the corpus. What is being excluded is implementation, not documentation.
+    def internal?(defn, comments, private_from)
+      return false if comments.include?("@example")
+
+      return true if defn[:name].to_s.start_with?("_")
+      return true if comments.include?("@api private")
+
+      boundary = private_from[defn[:module_path]]
+      !boundary.nil? && defn[:type] == "method" && defn[:start_line] > boundary
+    end
+
+    # The line at which each module or class turns private, if it does.
+    #
+    # Approximate on purpose: a bare `private` on its own line, attributed to the
+    # innermost enclosing definition by indentation. `private def foo` and
+    # `private :foo` are not detected, and the underscore convention covers most
+    # of what they would.
+    def private_regions(lines)
+      regions = {}
+      path = []
+
+      lines.each_with_index do |line, index|
+        case line
+        when /^(\s*)(?:module|class)\s+([A-Z][\w:]*)/
+          indent = Regexp.last_match(1).length
+          path.pop while path.any? && path.last.first >= indent
+          path << [indent, Regexp.last_match(2)]
+        when /^(\s*)end\b/
+          indent = Regexp.last_match(1).length
+          path.pop while path.any? && path.last.first >= indent
+        when /^\s*private\s*$/
+          regions[path.map(&:last).join("::")] ||= index + 1
+        end
+      end
+
+      regions
+    end
+
+    # What of a definition is worth indexing.
+    #
+    # A documented method's teaching content is its documentation -- the
+    # `@example` is the contract -- and its body is implementation that dilutes
+    # the embedding: a fifty-line `#next_value` buries the three lines that say
+    # what it is for. So a documented definition contributes its signature and
+    # leaves the body out; an undocumented one contributes its body, because that
+    # is the only thing it has to say.
+    def teaching_text(defn, node_text, comments)
+      return node_text if comments.strip.empty? || defn[:type] != "method"
+
+      node_text.lines.first.to_s.rstrip
     end
 
     # Walk Ripper sexp to extract module/class/def definitions with line ranges.
