@@ -209,10 +209,57 @@ module NotaKnowledgeBase
     # one. The table is small and a large `k` costs almost nothing.
     KNN_OVERSHOOT = 3
 
-    def knn_fetch_limit(db, kind, n_results)
-      return n_results * 3 if kind == "all"
+    # The conceptual layer, and how much of an undifferentiated search is kept
+    # for it.
+    #
+    # WHY THIS EXISTS. Once the filtering bug above was fixed, `kind: "docs"`
+    # answers ten out of ten composition questions and lands on the right
+    # section -- "how do I loop a sequence of notes" comes back at
+    # `sequencer.md > When is this the answer`. The SAME questions asked with
+    # `kind: "all"` bring the conceptual layer into the top five three times out
+    # of ten. The demos bury it: 830 chunks of 2359, and a demo README describes
+    # what a piece does in the very register the question is asked in, so it wins
+    # on similarity fairly.
+    #
+    # That is the trap. An undifferentiated search rewards what RESEMBLES the
+    # question, and the layer that says *when is this the answer* does not
+    # resemble the question -- it answers it. Left to similarity alone, the
+    # assistant gets back examples that confirm the framing it already had, which
+    # is the failure the modelling gate exists to prevent.
+    #
+    # So reserve room rather than hope. Not a boost -- the conceptual results are
+    # still the nearest ones of their kind, and if there are none the slots go
+    # back to everybody else.
+    CONCEPTUAL_KIND = "docs"
+    CONCEPTUAL_QUOTA = 0.4
 
+    # ...and only when the conceptual layer is actually close to the question.
+    #
+    # Reserving room unconditionally pads a "signature of Chord#with_move" with
+    # two prose chunks that displace two API ones. Measured over the battery, the
+    # two cases separate cleanly by how far the nearest conceptual chunk sits
+    # from the nearest chunk overall: 1.19-1.24x for questions about what to do,
+    # 1.43-1.81x for questions about a signature. A question that already knows
+    # the name it is asking about does not need to be told when to use it.
+    #
+    # Calibrated on this corpus. What would invalidate it: a large change in the
+    # proportion of conceptual text, or a different embedding model -- the ratio
+    # is scale-free but the gap between the two populations may not survive
+    # either. Re-run tools like the F3 battery before trusting it after such a
+    # change.
+    CONCEPTUAL_PROXIMITY = 1.3
+
+    def knn_fetch_limit(db, kind, n_results)
       counts = kind_counts(db)
+
+      # An undifferentiated search has to over-fetch too, and for the same
+      # reason: reserving room for the conceptual layer does nothing if the
+      # layer never reaches the candidate pool. Fifteen neighbours of a corpus
+      # where `docs` is one chunk in twenty contain, on average, less than one
+      # of them -- which is exactly what the measurement showed. Fetch as if the
+      # search were FOR the conceptual layer, and then let everybody compete.
+      kind = CONCEPTUAL_KIND if kind == "all"
+
       total = counts.values.sum
       of_kind = counts[kind].to_i
 
@@ -270,10 +317,33 @@ module NotaKnowledgeBase
           "distance"    => row["distance"]
         }
 
-        break if all_results.length >= n_results
       end
 
-      all_results
+      kind == "all" ? with_conceptual_quota(all_results, n_results) : all_results.first(n_results)
+    end
+
+    # Keeps the nearest results, but reserves part of them for the conceptual
+    # layer when the search did not ask for a kind.
+    #
+    # Order is preserved by distance within each group and across the merge, so
+    # a reader still sees the nearest thing first; what changes is only which
+    # ones survive the cut.
+    def with_conceptual_quota(results, n_results)
+      return results.first(n_results) if results.length <= n_results
+
+      reserved = [(n_results * CONCEPTUAL_QUOTA).floor, 1].max
+      nearest = results.first["distance"].to_f
+
+      conceptual = results
+                   .select { |r| r["kind"] == CONCEPTUAL_KIND }
+                   .select { |r| nearest.zero? || r["distance"].to_f / nearest <= CONCEPTUAL_PROXIMITY }
+                   .first(reserved)
+
+      return results.first(n_results) if conceptual.empty?
+
+      rest = (results - conceptual).first(n_results - conceptual.length)
+
+      (conceptual + rest).sort_by { |r| r["distance"] }
     end
 
     # Search for similar chunks using KNN, optionally filtering by kind.
