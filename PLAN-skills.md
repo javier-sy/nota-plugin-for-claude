@@ -209,6 +209,23 @@ semántica**. Ya es así; se escribe como criterio. No entran en este programa.
   fundir lo privado en los huecos de los demos.
 - **Nueva `get_doc(source)`**: todos los trozos de un documento en orden. Resuelve
   lo de `idioms.md`. Barata, sin embeddings.
+
+  **Variante mejor, de Javier: leerlo de la GEMA INSTALADA, no del índice.** La
+  gema publica sus `docs/` (16 ficheros; el gemspec los incluye a propósito),
+  así que `Gem::Specification.find_by_name('musa-dsl').gem_dir` da el documento
+  íntegro y **de la versión que el usuario tiene**.
+
+  Eso arregla un desajuste de versión que la variante indexada no toca: hoy
+  `knowledge.db` se construye desde el árbol de fuentes que hubiera en el
+  momento del build, así que quien tenga 0.43.1 instalado recibe de la KB la
+  documentación de 0.48.0. Es el mismo problema que este programa lleva
+  persiguiendo, un nivel más arriba, y por construcción en vez de por
+  disciplina.
+
+  Dos límites: **no sustituye a la KB** — la búsqueda semántica necesita los
+  embeddings precalculados, y esto da recuperación exacta de un documento
+  nombrado; son complementarias. Y hay que decidir el repliegue cuando no haya
+  gema instalada.
 - **Reversión de la cuota conceptual** (`db.rb:233-250, 322-347`).
   **`KNN_OVERSHOOT` y `kind_counts` SOBREVIVEN**: son la corrección de F2.0, y
   tirarlos resucitaría el bug justo cuando las skills empezarían a confiar en
