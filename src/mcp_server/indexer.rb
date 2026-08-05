@@ -110,6 +110,16 @@ module NotaKnowledgeBase
         DB.create_schema(db)
         DB.upsert_chunks(db, chunks)
 
+        # Anything the index still holds that this build did not produce is a
+        # document that was deleted or renamed upstream. It goes.
+        pruned = DB.prune_absent(db, chunks)
+        if pruned.empty?
+          lines << "Nothing stale to prune"
+        else
+          lines << "Pruned #{pruned.sum { |_, n| n }} chunks no longer in the corpus:"
+          pruned.each { |source, n| lines << "  #{n}  #{source}" }
+        end
+
         # Step 4: Store repo version metadata for GitHub URL generation
         lines << "Storing source metadata..."
         store_source_metadata(db, source_root)

@@ -93,7 +93,7 @@ Manage best practices for MusaDSL composition projects. Practices can be generat
 ### Regenerate condensed reference (developer mode)
 
 1. Read all `.md` files from `data/best-practices/`
-2. Distill into `rules/best-practices.md` (~30-50 lines): numbered list, imperative tone, one line per practice
+2. There is no condensed plugin-wide summary any more: practices that describe musa-dsl itself belong in musa-dsl's own documentation, and what remains here is the user's own. Distil only if the user asks for a personal index.
 3. Write the file to the filesystem
 4. Show the generated reference
 
@@ -128,8 +128,8 @@ Every practice file follows this structure:
 
 ## Important
 
-- User practices are stored as kind `"best_practice"` in `private.db`, searchable via `search` with `kind: "all"` or `"best_practice"`
-- Global practices are in `knowledge.db`, also searchable as `"best_practice"`
+- User practices are stored as kind `"best_practice"` in `private.db`, searchable via `search` with `kind: "best_practice"`, which returns the plugin's and the user's under separate headings
+- The few that ship with the plugin are in `knowledge.db`, under the same kind and labelled apart
 - The condensed index (`~/.config/nota/private-best-practices.md`) is a quick-reference summary, not a replacement for the full practices
 - `{{cmd:code}}` automatically searches best practices as part of its research step
 - The `[consolidation candidate]` markers in `{{cmd:analyze}}` output signal patterns worth extracting as practices

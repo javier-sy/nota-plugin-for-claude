@@ -4,7 +4,10 @@ DB_PATH     := $(PLUGIN_ROOT)/src/mcp_server/knowledge.db
 CHUNKS_DIR  := $(PLUGIN_ROOT)/src/data/chunks
 RUBY        := bundle exec ruby
 
-.PHONY: setup chunks embed build package clean verify-server status generate generate-claude generate-opencode
+# `spec` collides with the spec/ directory: without .PHONY, make considers the
+# target already made and `make check` passes green without running one example.
+.PHONY: setup chunks embed build package clean verify-server status generate \
+        generate-claude generate-opencode contract battery check spec
 
 ## Install Ruby gem dependencies
 setup:
@@ -52,6 +55,21 @@ verify-server:
 	@echo '{"jsonrpc":"2.0","method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"test","version":"0.1"}},"id":1}' | \
 		$(RUBY) src/mcp_server/server.rb 2>&1 | \
 		head -1 | grep -q '"jsonrpc"' && echo "Server responds OK" || (echo "Server failed to respond" && exit 1)
+
+## Check that the documents Nota reads from musa-dsl are where it says they are
+contract:
+	$(RUBY) tools/contract-check.rb
+
+## Measure whether questions asked by intention land on the right document
+battery:
+	$(RUBY) tools/retrieval-battery.rb
+
+## Everything that can be checked without a person: server, contract, specs
+check: verify-server contract spec
+
+## Run the plugin's own specs
+spec:
+	bundle exec rspec
 
 ## Show index status
 status:

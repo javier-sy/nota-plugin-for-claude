@@ -4,8 +4,9 @@ PKG_NAME="nota-plugin"
 VERSION_FILE="VERSION"
 PUBLISH_PLATFORM="GitHub"
 
-# Verifica que el servidor MCP arranca antes de tagear
-TEST_COMMAND="make verify-server"
+# Antes de tagear: que el servidor arranque, que los documentos que Nota lee de
+# musa-dsl sigan donde dice, y que los invariantes se sostengan.
+TEST_COMMAND="make check"
 
 # Propagar versión a manifest.yml y marketplace.json tras cada `version.sh new`.
 # $current_version y $new_version están en scope en el momento de la evaluación.
@@ -32,10 +33,16 @@ INSTALL_COMMAND='
     fi
 '
 
-# Recordatorio post-bump: artefactos generados que pueden necesitar regeneración
-REGENERATION_REMINDER="Si musa-dsl cambió, regenera los archivos estáticos de reglas antes de publicar:
-  - src/rules/musadsl-reference.md  →  prompts/regenerate-reference.md
-  - src/rules/musadsl-philosophy.md →  prompts/regenerate-philosophy.md"
+# Recordatorio post-bump.
+#
+# Ya no hay nada que regenerar a mano: desde 1.0.0 el plugin no lleva copia de la
+# documentación de musa-dsl, la lee de la gema instalada. Lo que sí hay es un
+# orden de publicación que importa.
+REGENERATION_REMINDER="Orden de publicación:
+  1. Empuja el plugin PRIMERO. El CI reconstruye knowledge.db desde lo que hay en
+     main, así que un rebuild lanzado antes usaría el troceador viejo.
+  2. Sólo entonces dispara 'Build and Release Knowledge DB' en GitHub Actions.
+  3. Comprueba en el log que best_practice no es 0 y que la batería pasa."
 
 # Detección de instalación local: Claude Code cachea los plugins en
 # ~/.claude/plugins/cache/<vendor>/<plugin>/<version>/

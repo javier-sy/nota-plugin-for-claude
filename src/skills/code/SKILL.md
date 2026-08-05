@@ -27,29 +27,60 @@ Help the user program and modify algorithmic compositions using MusaDSL and Ruby
 
 3. **If working with an existing composition**: read the code from the filesystem to understand it fully before making changes.
 
-4. **Research using MCP tools** — verify everything against the knowledge base:
-   - `search` — find relevant documentation, patterns, and examples
-   - `search` with `kind: "best_practice"` — find relevant best practices for the techniques being used
-   - `get_best_practices_index` — read the user's condensed best practices index to check for applicable patterns
-   - `api_reference` — verify exact method signatures and parameters before using them
-   - `pattern` — get working code patterns for specific techniques
-   - `dependencies` — what setup is needed for a concept
-   - `similar_works` — find similar compositions for reference and inspiration
+4. **Consult, one question per layer.** Not "search the knowledge base": several
+   different questions, each aimed at the layer that can answer it. The tool
+   descriptions carry the full contract; what matters here is that you ask each
+   layer what it knows and relate the answers yourself.
 
-   **Beware of what this step can and cannot do.** These tools verify what you already chose: `api_reference` confirms the signature of a method you had in mind, `search` returns what matches your framing. If your framing is wrong, they will confirm the wrong thing — and the demos in the knowledge base include simplified scaffolding that is not always the idiomatic form. Never take a demo as a model of good form without asking whether it was simplifying to isolate a concept. The step that corrects the framing is step 5, not this one.
+   | when | layer | how to phrase it |
+   |---|---|---|
+   | before the modelling table | `docs` | **the shape of the problem**, never the verb you had in mind — *"a plan of sections each with a duration"*, not *"how do I use every"* |
+   | after choosing an idiom | `api_reference` | the identifier, by name |
+   | when assembling setup | `demo_code` | the wiring — *"TimerClock transport MIDIVoices"*. **Never** as evidence for a choice of form |
+   | when writing material | `best_practice` | the technique in use |
+   | only if the user's own work is involved | `private_works`, `analysis` | described musically |
+
+   **What this step cannot do.** These tools confirm what you already chose:
+   `api_reference` checks a name you had in mind, and a search returns what
+   matches your framing. If the framing is wrong they will confirm the wrong
+   thing. The step that corrects the framing is step 5 — and it corrects it by
+   asking `docs` about the SHAPE of the problem, which is the one query whose
+   answer you cannot predict.
+
+   And a demo is never an argument. The demos simplify to isolate a concept, so
+   their scaffolding is often not the idiomatic form. They show how something is
+   wired; they never show that wiring it that way was right.
 
 5. **Ask the question, in writing** — *what has to be done here, how would it be expressed most beautifully in MusaDSL?*
 
-   This is a required artifact, not a mood. Before proposing anything, produce a **modelling table** with one row per layer or material of the piece:
+   This is a required artifact, not a mood. Three moves, in order:
 
-   | layer | shape of the data | consuming verb | why not the neighbouring verb |
-   |---|---|---|---|
+   **a. Route.** `search` with `kind: "docs"`, phrased as the shape of the data
+   and of the plan. You are asking which document discusses your problem, not
+   for an answer: a snippet is two thousand characters chosen for resembling
+   your query, and the boundary between two verbs is never inside it.
 
-   - **shape of the data** — serie? neumas? generator output (Markov, Variatio, Rules, Grammar, Darwin)? timed serie? matrix? a class of its own?
+   **b. Read it whole.** `get_doc` the document the routing found. This is where
+   the decision is actually made, because *when is `every` the answer and when is
+   it a serie* lives in how the document relates its own parts. Read it now, at
+   the gate — not from memory of having read it earlier, which after a long
+   conversation is memory of something no longer in front of you.
+
+   **c. Fill the table**, one row per layer or material of the piece:
+
+   | layer | shape of the data | consuming verb | why not the neighbouring verb | source |
+   |---|---|---|---|---|
+
+   - **shape of the data** — serie? neumas? generator output (Markov, Variatio, Grammar, Darwin)? timed serie? matrix? a class of its own?
    - **consuming verb** — `play`, `play_timed`, `move`, `every`, `on` + `launch`, `at`
-   - **two answers always require an explicit justification in the last column**: `at` with a computed position, and "a class of its own" (say why the framework does not already have it)
+   - **source** — `document > section` of the text you just read whole, for the row it supports. A row with no citation has no argument behind it, and a row citing a `[demo_code]` result has the wrong kind of argument.
+   - **two answers always require an explicit justification**: `at` with a computed position, and "a class of its own" (say why the framework does not already have it)
 
-   Read `docs/idioms.md` in musa-dsl (or `search "idioms choosing the MusaDSL form" kind: "docs"`) and fill the table **from the shape of the problem**, not from the verb you already had in mind. The commonest failure is to model a plan as absolute positions, after which a loop of `at` is inevitable: **model plans as durations**.
+   `docs/idioms.md` is already in context, read from the installed gem: it is
+   organised by symptom, so enter it from what you are about to write. Fill the
+   table **from the shape of the problem**, never from the verb you already had
+   in mind. The commonest failure is to model a plan as absolute positions, after
+   which a loop of `at` is inevitable: **model plans as durations**.
 
 6. **Propose the approach** — on top of the table, explain:
    - The overall structure (sections, voices, events)
@@ -62,23 +93,39 @@ Help the user program and modify algorithmic compositions using MusaDSL and Ruby
    - Apply relevant best practices found in the search — both general (from knowledge.db) and user-specific (from private.db)
    - Follow the project structure conventions (see below)
    - Include comments where the logic maps musical concepts to code
-   - Use the static reference in `rules/musadsl-reference.md`, `rules/best-practices.md`, and MCP tools together for accuracy
+   - The framework's own `docs/idioms.md` and `docs/vocabulary.md` are already in context, read from the installed gem — use them for form and for what exists, and the MCP tools for signatures and behaviour
 
-8. **If creating a new composition**: generate the complete project structure:
+8. **Run `lint` before showing the code. Every time, without exception.**
+
+   Everything above this line is instruction, and instruction gets skipped: the
+   gate can be waved through, the catalogue can sit unread in context, the source
+   column can be left empty, and none of that raises. `lint` runs on the text, so
+   it is the one step that does not depend on remembering.
+
+   - **Certain** findings are facts. Fix them, then run it again.
+   - **Worth arguing** findings are shapes that are usually the generalist reflex
+     and sometimes exactly right. For each one: change it, **or** add one line to
+     the proposal saying why this is the case where the reflex is correct. A
+     bespoke class for a structure that must be *inspected* is a good answer; an
+     unexamined one is not an answer at all.
+   - A clean report means the text is clean. It says nothing about whether the
+     form is right — that was step 5, and no regular expression can redo it.
+
+9. **If creating a new composition**: generate the complete project structure:
    - `musa/main.rb` — entry point with transport, clock, scale, voices, transcriptor setup
    - `musa/score.rb` — composition code with scheduled events. **Its header must carry `include Musa::Series` and the `using` lines for every refinement it will need**, even before anything uses them: a vocabulary that is not in scope cannot be reached, and its absence produces no error because the reflex that avoids it also avoids the constructors that would raise.
    - `musa/Gemfile` — dependencies
    - `README.md` — project documentation (see below)
    - Follow the naming convention: `YYYY-MM-DD Project Name [musa bw]` (adjust tags)
 
-9. **Ensure the composition ends properly** if it is not meant to run indefinitely:
+10. **Ensure the composition ends properly** if it is not meant to run indefinitely:
    - The piece must have a clear termination point — e.g., after the last section finishes, stop the transport
    - Use `control.after { transport.stop }` or similar after the final play/event chain
    - If using event chaining (`on`/`launch`), the last section's `control.after` should trigger the stop
    - If the piece is designed to loop or run until manually stopped, document this explicitly in the README
    - **Never leave a finite composition without a termination mechanism** — the user should not have to Ctrl+C to end a piece that was supposed to finish
 
-10. **Generate a README.md** for the project that includes:
+11. **Generate a README.md** for the project that includes:
    - Brief description of the piece and its musical intention
    - **Audio generator connection** — a dedicated section documenting:
      - Which DAW or synthesizer the piece targets (Bitwig, Ableton Live, SuperCollider, etc.)
@@ -89,7 +136,7 @@ Help the user program and modify algorithmic compositions using MusaDSL and Ruby
    - How to run the piece
    - Any special requirements or notes
 
-11. **Provide guidance on testing and common pitfalls**:
+12. **Provide guidance on testing and common pitfalls**:
     - How to run and test the piece
     - Warn about common runtime issues
     - Suggest `{{cmd:index}}` to index the work and `{{cmd:analyze}}` to generate a musical analysis when ready
@@ -111,32 +158,18 @@ When the user describes their intention musically, translate it:
 | "unpredictable" | Random elements, uniform Markov distributions, wide parameter ranges |
 | "rhythmically complex" | Polyrhythms, irregular meters, tuplets, overlapping cycles |
 
-## Shape-to-Idiom Translation
+## Choosing the form
 
-The table above maps *adjectives*. This one maps **shapes** — and shape is what you can see at the moment you are about to choose wrongly. Full catalogue with rationale and anti-patterns in `docs/idioms.md` (musa-dsl).
+`docs/idioms.md` is in this context already, read from the installed
+musa-dsl. It is the catalogue of forms, organised **by symptom** — each
+entry names a reflex, the idiom that replaces it, what is gained, how the
+reflex is detectable in text, and when the reflex is actually right.
 
-| Shape of the problem | Idiom |
-|---|---|
-| Events that follow one another in time | Serie carrying `duration:` + `play` |
-| Several layers of events at their own times | AbsTimed series + `TIMED_UNION` + `play_timed` |
-| A parameter that changes continuously | `move from:, to:, duration:, every:, function:` |
-| Something that recurs at a fixed interval | `every` |
-| Sections that follow one another | `on` / `launch` + `control.after` |
-| A sequence of any values | `S`, `FOR`, `SIN`, `FIBO`, `HARMO`, `RND`, `E` |
-| Parallel parameters forming one event | `H` (ends with the shortest) / `HC` (cycles to the longest) |
-| The same material for several voices | `.buffered` + `.buffer.i` per voice |
-| A recurrence with state | `FIBO()`, or `E` with `caller.parameters` |
-| A choice with probabilities and memory | Markov (which is itself a serie) |
-| A constrained random sequence | `RND(random:)` + `.remove { |v, history| }` |
-| An exhaustive parameter space | Variatio |
-| A structure that grows by rules | Rules (L-system), GenerativeGrammar |
-| Selection by fitness among candidates | Darwin |
-| Pitch, interval, chord, key | `scale[]`, `chord_on`, `.with_quality`, `.at_octave` |
-| Material that reads as a score | neumas / `.neu` files |
-| Ornament, articulation | Transcriptor + transcription set |
-| A trajectory drawn in several dimensions | `Matrix#to_p` → `to_timed_serie` → `play_timed` |
-| A piece to query or export | `Datasets::Score`, MusicXML builder |
-| Time without a real clock (render, tests) | `DummyClock`, `ExternalTickClock`, tickless mode |
+Enter it from what you are about to write, not from a table here. A
+condensed copy of it used to live in this file, and a condensed copy is an
+edited copy: it drifted from the original, and once turned a false claim
+into a rule with emphatic typography. The catalogue travels with the gem
+the user has installed, so it cannot disagree with their framework.
 
 ## Critical Guards
 
@@ -155,20 +188,25 @@ These prevent code that FAILS. The guards in the next section prevent something 
 
 ## Idiom Guards
 
-Idiom failures are invisible to testing — the code runs, the piece sounds right, and it is still not MusaDSL. These guards therefore match **the token being written**, not a virtue. When one fires, stop and consult `docs/idioms.md` (or `search "idioms choosing the MusaDSL form" kind: "docs"`) before continuing.
+Idiom failures are invisible to testing — the code runs, the piece sounds
+right, and it is still not MusaDSL. The catalogue in `idioms.md` lists each
+reflex together with how it is **detectable** in the text you are writing;
+those detections are the guards. Match them against the token you are about
+to type, not against a virtue you intend to have, and when one fires read
+that entry's section whole before continuing.
 
-- **`at` inside a loop, or `at` whose position contains a loop variable** — STOP. A sequence of events in time is a Serie carrying `duration:` consumed by `play`. Reserve `at` for genuine one-off landmarks. If you are holding absolute positions you already took the wrong turn upstream: **model plans as durations, not as positions.**
-- **`a, b = b, a + b`, or any hand-written recurrence** — `FIBO()` exists; `E(*seeds) { |last_value:, caller:| ... }` exists for seeded or custom recurrences, carrying state in `caller.parameters`.
-- **Arithmetic on MIDI note numbers** (`pitch + 7`, `% 12`, tables of semitones) — use `scale[grade]`, `note.at_octave`, `.sharp`/`.flat`, `chord_on`, `chord.with_quality`/`.with_move`. Integer pitches weld the piece to one tuning and one tonic.
-- **`60.0 / bpm`, `* beat` or integer velocities appearing in the MATERIAL** — the musical layer stays GDV (grade, duration as multiples of `base_duration`, velocity as a dynamic mark); convert with `to_pdv(scale)` and to seconds only in the block that finally emits sound.
-- **`rand` not derived from a seeded `Random`, or a ladder of `if p < 0.3`** — `RND(values, random:)` with `.remove { |value, history| ... }` for constraints, Markov when the tendency has memory. Note `Markov` **is a serie** and can feed `play` directly.
-- **`product` / `permutation` / nested loops filling a candidate array** — that is Variatio, GenerativeGrammar, Rules or Darwin. Pruning during growth beats generate-then-filter.
-- **`every` whose body nudges a variable towards a target** — that is `move from:, to:, duration:, every:, function:`.
-- **`sort_by` on a time field followed by index traversal** — that is `TIMED_UNION` and `play_timed`.
-- **Position constants defined by adding to other position constants** — macro form is `on`/`launch` with `control.after`, not arithmetic. Only events can distinguish *finishing* from *being stopped*.
-- **Before writing `S(`, `H(`, `FIBO(` or any constructor in a file** — check that the file has `include Musa::Series`. Its absence is self-concealing: the reflex avoids the constructors, so no `NameError` ever reveals it.
+One guard is not in the catalogue, because it is not an idiom failure but a
+setup failure that conceals itself:
 
-A bespoke Ruby class is sometimes the honest answer — a serie is a consumable flow and cannot be asked for its period or its reachable states, so a structure that must be *inspected* deserves a class. What is never acceptable is that the choice was not argued against the framework.
+- **Before writing `S(`, `H(`, `FIBO(` or any constructor in a file** —
+  check that the file has `include Musa::Series`. Its absence is
+  self-concealing: the reflex avoids the constructors, so no `NameError`
+  ever reveals it.
+
+A bespoke Ruby class is sometimes the honest answer — a serie is a
+consumable flow and cannot be asked for its period or its reachable states,
+so a structure that must be *inspected* deserves a class. What is never
+acceptable is that the choice was not argued against the framework.
 
 ## When MCP tools return setup errors
 

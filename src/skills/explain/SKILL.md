@@ -19,24 +19,51 @@ You are explaining MusaDSL concepts to a user who is composing algorithmic music
 ## Process
 
 1. **Identify** which MusaDSL subsystem(s) are relevant to the question:
-   - series, sequencer, neumas, datasets, music/scales/chords, generative (Markov, Variatio, Rules, GenerativeGrammar, Darwin), transcription, transport, matrix, midi, repl, musicxml
+   - series, sequencer, neumas, datasets, music/scales/chords, generative (Markov, Variatio, GenerativeGrammar, Darwin), transcription, transport, matrix, midi, repl, musicxml
 
-2. **Retrieve** accurate information using MCP tools:
-   - `search` — semantic search across docs, API, demos, private works, and composition analyses (use kind `"all"` for broadest results, or `"private_works"`/`"analysis"` for specific kinds)
-   - `api_reference` — exact API reference for a module/method
-   - `pattern` — code pattern for a specific technique
-   - `dependencies` — what setup is needed for a concept
-   - `similar_works` — find similar example works/demos (also searches the user's private works and composition analyses if available)
+2. **Classify the question before touching anything.** What is being asked
+   decides which layers can answer it, and in what order. Getting this wrong
+   produces an answer that is fluent, sourced, and about something else.
 
-3. **Synthesize** your answer:
-   - Combine retrieved context with the static reference in `rules/musadsl-reference.md`
-   - Prioritize information from the knowledge base over general knowledge
-   - Include working Ruby code examples
-   - Mention relevant demos (demo-00 through demo-22) when applicable
+   | the question is… | layers, in order |
+   |---|---|
+   | *when do I use X? X or Y?* | `docs` to route → `get_doc` the winner whole → `api_reference` to check each claim about behaviour |
+   | *what does X do? what is the signature?* | `api_reference` → then `docs`, reframed as **the decision behind it**: explaining what something is without saying when it is the answer is half an explanation |
+   | *how do I set X up?* | `demo_code` (+ `gem_readme`) |
+   | *what do I have to install?* | `gem_readme` + `docs` |
+   | *something about my own work* | `analysis` / `private_works` |
+
+   Ask each relevant layer **separately**, in one `search` call with one entry
+   per layer. There is no undifferentiated search: a question you cannot assign
+   to a layer is a question you have not finished forming.
+
+3. **Synthesize** — and the layers do not have equal standing:
+
+   - **`docs` leads.** It is the only layer that says *when* something is the
+     answer. If the question was a "when", the answer is built on it.
+   - **`api` verifies.** Every claim about behaviour — what a method returns,
+     what it does to state, what it raises — is checked against the contract or
+     it is not made.
+   - **`demo` illustrates.** It shows a working assembly. **It never establishes
+     that a form is right**, and answering a "when" from a demo is the specific
+     error this ordering exists to prevent.
+   - `docs/idioms.md` and `docs/vocabulary.md` are in context already, read from
+     the user's installed gem: the first for form, the second for what exists.
+
+   A `docs` snippet routes; it does not settle anything. If the answer turns on
+   a distinction between two verbs, read that document whole with `get_doc`
+   first — the distinction lives in how the document relates its parts, not in
+   the fragment that most resembled the question.
+
+   End with a **sources block**, grouped by layer, naming `document > section`
+   for what you leaned on. A reader can then check the part that matters to them,
+   and a wrong citation is visible instead of merely being wrong.
 
 4. **Verify** accuracy:
-   - NEVER invent API methods — only use what's found in the knowledge base or confirmed via rubydoc.info
-   - If unsure about a method signature, use `api_reference` to confirm
+   - NEVER invent API methods. `api_reference` looks names up and **can say no**:
+     when it reports that a name is not in the indexed API, that is information.
+     Check rubydoc.info before telling the user a method does not exist, and never
+     fill the gap with something plausible.
    - Series are LAZY: they use `.next_value`, NOT `.each`
    - Neuma durations are MULTIPLES of base_duration, not fractions
    - `using Musa::Extension::Neumas` is file-scoped (Ruby refinements)
@@ -63,12 +90,12 @@ If MCP tool results mention "not configured", "API key", or "{{cmd:setup}}":
 
 ## When MCP tools are not available at all
 
-If the knowledge base tools (search, api_reference, pattern, dependencies, similar_works)
+If the knowledge base tools (search, api_reference, get_doc, list_docs, similar_works)
 are not available in this session (not listed as tools, not just erroring):
 
 1. **Inform the user** that the MusaDSL knowledge base is not accessible and your answers
    will be based on limited static reference material.
-2. **Use only** the static reference in `rules/musadsl-reference.md` for your answers.
+2. **Use only** `docs/idioms.md` and `docs/vocabulary.md` — in context from the installed gem — and say plainly that signatures could not be verified.
 3. **Never invent** API methods or signatures — if you cannot confirm via the knowledge base,
    explicitly state that.
 

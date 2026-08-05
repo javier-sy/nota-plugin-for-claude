@@ -1,4 +1,5 @@
 import type { Plugin } from "@opencode-ai/plugin"
+import { execFileSync } from "node:child_process"
 import { dirname } from "node:path"
 import { fileURLToPath } from "node:url"
 
@@ -37,14 +38,32 @@ export default (async () => {
         timeout: 30000,
       }
 
-      // 2. Always-in-context reference files (rules/)
+      // 2. Always-in-context files.
+      //
+      //    How the assistant behaves is ours and ships with the package. What
+      //    musa-dsl IS belongs to musa-dsl: its symptom index and its vocabulary
+      //    are read from the INSTALLED GEM, resolved now rather than at build
+      //    time, because the version the user has is the version they should be
+      //    reading. A copy of them here would drift, and every copy that ever
+      //    existed did.
       cfg.instructions = cfg.instructions ?? []
-      cfg.instructions.push(
-        `${HERE}/rules/musadsl-reference.md`,
-        `${HERE}/rules/best-practices.md`,
-        `${HERE}/rules/musadsl-philosophy.md`,
-        `${HERE}/rules/think-journal.md`,
-      )
+      cfg.instructions.push(`${HERE}/rules/think-journal.md`)
+
+      try {
+        const resolved = execFileSync(
+          "ruby",
+          [`${HERE}/mcp_server/musa_docs.rb`, "--paths"],
+          { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] },
+        ).trim()
+
+        // One path per line, or nothing at all when the gem is missing or below
+        // the floor — in which case the MCP server says so on first use. There
+        // is no degraded fallback by design: serving documentation from the
+        // wrong version is what reading from the gem exists to prevent.
+        if (resolved) cfg.instructions.push(...resolved.split("\n"))
+      } catch {
+        // No Ruby, or no gem. The knowledge-base tools report it in context.
+      }
 
       // 3. Generated skills (model-invoked, descriptions rich with trigger keywords)
       cfg.skills = cfg.skills ?? { paths: [] }

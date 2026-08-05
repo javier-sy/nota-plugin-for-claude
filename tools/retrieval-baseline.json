@@ -1,0 +1,389 @@
+{
+  "taken": "antes de E1, knowledge.db de musa-dsl v0.49.1",
+  "results": [
+    {
+      "question": "I have a plan of sections, each with a duration, and I want them to sound one after another",
+      "kind": "docs",
+      "rank": 0,
+      "got": [
+        "https://github.com/javier-sy/musa-dsl/blob/v0.49.1/docs/idioms.md > 1. Events placed in time",
+        "https://github.com/javier-sy/musa-dsl/blob/v0.49.1/docs/idioms.md > The root principle",
+        "https://github.com/javier-sy/musa-dsl/blob/v0.49.1/docs/subsystems/sequencer.md > When is this the answer",
+        "https://github.com/javier-sy/musa-dsl/blob/v0.49.1/docs/idioms.md > 4. Layers: musical intent vs. realization",
+        "https://github.com/javier-sy/musa-dsl/blob/v0.49.1/docs/guides/project-structure.md > Sections that recalculate themselves"
+      ]
+    },
+    {
+      "question": "should I compute the bar number of each event before scheduling it?",
+      "kind": "docs",
+      "rank": 0,
+      "got": [
+        "https://github.com/javier-sy/musa-dsl/blob/v0.49.1/docs/idioms.md > 1. Events placed in time",
+        "https://github.com/javier-sy/musa-dsl/blob/v0.49.1/docs/subsystems/sequencer.md > Where time starts, and what a position is",
+        "https://github.com/javier-sy/musa-dsl/blob/v0.49.1/docs/subsystems/sequencer.md > Times and durations",
+        "https://github.com/javier-sy/musa-dsl/blob/v0.49.1/docs/guides/project-structure.md > Control arriving from outside",
+        "https://github.com/javier-sy/musa-dsl/blob/v0.49.1/docs/guides/project-structure.md > Sections that recalculate themselves"
+      ]
+    },
+    {
+      "question": "something has to happen every two bars for the whole piece",
+      "kind": "docs",
+      "rank": 2,
+      "got": [
+        "https://github.com/javier-sy/musa-dsl/blob/v0.49.1/docs/guides/project-structure.md > Sections that recalculate themselves",
+        "https://github.com/javier-sy/musa-dsl/blob/v0.49.1/docs/guides/project-structure.md > Form as a state machine",
+        "https://github.com/javier-sy/musa-dsl/blob/v0.49.1/docs/idioms.md > 1. Events placed in time",
+        "https://github.com/javier-sy/musa-dsl/blob/v0.49.1/docs/subsystems/sequencer.md > When is this the answer",
+        "https://github.com/javier-sy/musa-dsl/blob/v0.49.1/docs/idioms.md > 10. Parameters that change over time"
+      ]
+    },
+    {
+      "question": "I need a list of values that changes as the piece goes on",
+      "kind": "docs",
+      "rank": 0,
+      "got": [
+        "https://github.com/javier-sy/musa-dsl/blob/v0.49.1/docs/subsystems/series.md > When is this the answer",
+        "https://github.com/javier-sy/musa-dsl/blob/v0.49.1/docs/idioms.md > 10. Parameters that change over time",
+        "https://github.com/javier-sy/musa-dsl/blob/v0.49.1/docs/idioms.md > 14. Event lists for querying or export",
+        "https://github.com/javier-sy/musa-dsl/blob/v0.49.1/docs/vocabulary.md > datasets",
+        "https://github.com/javier-sy/musa-dsl/blob/v0.49.1/docs/idioms.md > Using this document"
+      ]
+    },
+    {
+      "question": "the same melodic material read by two voices at their own pace",
+      "kind": "docs",
+      "rank": 3,
+      "got": [
+        "https://github.com/javier-sy/musa-dsl/blob/v0.49.1/docs/idioms.md > 8. Musical material as text",
+        "https://github.com/javier-sy/musa-dsl/blob/v0.49.1/docs/examples/sequencer-dsl-voices.md > (intro)",
+        "https://github.com/javier-sy/musa-dsl/blob/v0.49.1/docs/subsystems/neumas.md > (intro)",
+        "https://github.com/javier-sy/musa-dsl/blob/v0.49.1/docs/subsystems/series.md > Prototype and instance",
+        "https://github.com/javier-sy/musa-dsl/blob/v0.49.1/docs/idioms.md > 9. Articulation and ornament"
+      ]
+    },
+    {
+      "question": "how do I write a recurrence where each value depends on the previous two",
+      "kind": "docs",
+      "rank": 0,
+      "got": [
+        "https://github.com/javier-sy/musa-dsl/blob/v0.49.1/docs/idioms.md > 5. Recurrences and hand-made state",
+        "https://github.com/javier-sy/musa-dsl/blob/v0.49.1/docs/guides/project-structure.md > Sections that recalculate themselves",
+        "https://github.com/javier-sy/musa-dsl/blob/v0.49.1/docs/guides/project-structure.md > Form as a state machine",
+        "https://github.com/javier-sy/musa-dsl/blob/v0.49.1/docs/idioms.md > 12. Macro form",
+        "https://github.com/javier-sy/musa-dsl/blob/v0.49.1/docs/subsystems/series.md > When is this the answer"
+      ]
+    },
+    {
+      "question": "I want to move up a third in the key rather than by semitones",
+      "kind": "docs",
+      "rank": 0,
+      "got": [
+        "https://github.com/javier-sy/musa-dsl/blob/v0.49.1/docs/idioms.md > 3. Pitch",
+        "https://github.com/javier-sy/musa-dsl/blob/v0.49.1/docs/subsystems/music.md > When is this the answer",
+        "https://github.com/javier-sy/musa-dsl/blob/v0.49.1/docs/subsystems/music.md > (intro)",
+        "https://github.com/javier-sy/musa-dsl/blob/v0.49.1/docs/vocabulary.md > music",
+        "https://github.com/javier-sy/musa-dsl/blob/v0.49.1/docs/subsystems/music.md > API Reference"
+      ]
+    },
+    {
+      "question": "building a chord on a degree and then inverting it",
+      "kind": "docs",
+      "rank": 0,
+      "got": [
+        "https://github.com/javier-sy/musa-dsl/blob/v0.49.1/docs/subsystems/music.md > When is this the answer",
+        "https://github.com/javier-sy/musa-dsl/blob/v0.49.1/docs/idioms.md > 3. Pitch",
+        "https://github.com/javier-sy/musa-dsl/blob/v0.49.1/docs/subsystems/music.md > Chords System",
+        "https://github.com/javier-sy/musa-dsl/blob/v0.49.1/docs/vocabulary.md > music",
+        "https://github.com/javier-sy/musa-dsl/blob/v0.49.1/docs/subsystems/series.md > Structural Transformations"
+      ]
+    },
+    {
+      "question": "a filter cutoff that opens slowly across four bars",
+      "kind": "docs",
+      "rank": 0,
+      "got": [
+        "https://github.com/javier-sy/musa-dsl/blob/v0.49.1/docs/idioms.md > 10. Parameters that change over time",
+        "https://github.com/javier-sy/musa-dsl/blob/v0.49.1/docs/guides/project-structure.md > Sections that recalculate themselves",
+        "https://github.com/javier-sy/musa-dsl/blob/v0.49.1/docs/idioms.md > 4. Layers: musical intent vs. realization",
+        "https://github.com/javier-sy/musa-dsl/blob/v0.49.1/docs/guides/project-structure.md > Control arriving from outside",
+        "https://github.com/javier-sy/musa-dsl/blob/v0.49.1/docs/idioms.md > 13. Multiparametric gesture"
+      ]
+    },
+    {
+      "question": "breathing: something that swells and recedes on a slow cycle",
+      "kind": "docs",
+      "rank": 0,
+      "got": [
+        "https://github.com/javier-sy/musa-dsl/blob/v0.49.1/docs/idioms.md > 10. Parameters that change over time",
+        "https://github.com/javier-sy/musa-dsl/blob/v0.49.1/docs/idioms.md > 5. Recurrences and hand-made state",
+        "https://github.com/javier-sy/musa-dsl/blob/v0.49.1/docs/guides/project-structure.md > Sections that recalculate themselves",
+        "https://github.com/javier-sy/musa-dsl/blob/v0.49.1/docs/vocabulary.md > series",
+        "https://github.com/javier-sy/musa-dsl/blob/v0.49.1/docs/guides/project-structure.md > Control arriving from outside"
+      ]
+    },
+    {
+      "question": "the piece has four sections and each one starts when the previous finishes",
+      "kind": "docs",
+      "rank": 3,
+      "got": [
+        "https://github.com/javier-sy/musa-dsl/blob/v0.49.1/docs/guides/project-structure.md > Form as a state machine",
+        "https://github.com/javier-sy/musa-dsl/blob/v0.49.1/docs/guides/project-structure.md > Sections that recalculate themselves",
+        "https://github.com/javier-sy/musa-dsl/blob/v0.49.1/docs/idioms.md > Using this document",
+        "https://github.com/javier-sy/musa-dsl/blob/v0.49.1/docs/subsystems/sequencer.md > When is this the answer",
+        "https://github.com/javier-sy/musa-dsl/blob/v0.49.1/docs/idioms.md > The root principle"
+      ]
+    },
+    {
+      "question": "how do I stop a repeating pattern without launching the next section",
+      "kind": "docs",
+      "rank": 3,
+      "got": [
+        "https://github.com/javier-sy/musa-dsl/blob/v0.49.1/docs/guides/project-structure.md > Sections that recalculate themselves",
+        "https://github.com/javier-sy/musa-dsl/blob/v0.49.1/docs/guides/project-structure.md > Form as a state machine",
+        "https://github.com/javier-sy/musa-dsl/blob/v0.49.1/docs/guides/project-structure.md > Stopping",
+        "https://github.com/javier-sy/musa-dsl/blob/v0.49.1/docs/idioms.md > 12. Macro form",
+        "https://github.com/javier-sy/musa-dsl/blob/v0.49.1/docs/subsystems/sequencer.md > Control Objects and `.stop`"
+      ]
+    },
+    {
+      "question": "a melody that is random but that I can reproduce exactly tomorrow",
+      "kind": "docs",
+      "rank": 0,
+      "got": [
+        "https://github.com/javier-sy/musa-dsl/blob/v0.49.1/docs/idioms.md > 6. Randomness",
+        "https://github.com/javier-sy/musa-dsl/blob/v0.49.1/docs/subsystems/series.md > Numeric Generators",
+        "https://github.com/javier-sy/musa-dsl/blob/v0.49.1/docs/guides/project-structure.md > Sections that recalculate themselves",
+        "https://github.com/javier-sy/musa-dsl/blob/v0.49.1/docs/subsystems/series.md > Merging Melodic Phrases",
+        "https://github.com/javier-sy/musa-dsl/blob/v0.49.1/docs/subsystems/series.md > Structural Transformations"
+      ]
+    },
+    {
+      "question": "I can tell whether a result is good but I cannot describe how to build it",
+      "kind": "docs",
+      "rank": 0,
+      "got": [
+        "https://github.com/javier-sy/musa-dsl/blob/v0.49.1/docs/idioms.md > 7. Combinatorics and search",
+        "https://github.com/javier-sy/musa-dsl/blob/v0.49.1/docs/idioms.md > (intro)",
+        "https://github.com/javier-sy/musa-dsl/blob/v0.49.1/docs/idioms.md > Using this document",
+        "https://github.com/javier-sy/musa-dsl/blob/v0.49.1/docs/subsystems/generative.md > When is this the answer",
+        "https://github.com/javier-sy/musa-dsl/blob/v0.49.1/docs/idioms.md > 13. Multiparametric gesture"
+      ]
+    },
+    {
+      "question": "every combination of four parameters, exhaustively",
+      "kind": "docs",
+      "rank": 0,
+      "got": [
+        "https://github.com/javier-sy/musa-dsl/blob/v0.49.1/docs/idioms.md > 7. Combinatorics and search",
+        "https://github.com/javier-sy/musa-dsl/blob/v0.49.1/docs/subsystems/generative.md > Variatio",
+        "https://github.com/javier-sy/musa-dsl/blob/v0.49.1/docs/subsystems/series.md > Combining Multiple Parameters",
+        "https://github.com/javier-sy/musa-dsl/blob/v0.49.1/docs/idioms.md > 13. Multiparametric gesture",
+        "https://github.com/javier-sy/musa-dsl/blob/v0.49.1/docs/subsystems/generative.md > When is this the answer"
+      ]
+    },
+    {
+      "question": "each note should follow plausibly from the one before, with tendencies",
+      "kind": "docs",
+      "rank": 2,
+      "got": [
+        "https://github.com/javier-sy/musa-dsl/blob/v0.49.1/docs/idioms.md > 8. Musical material as text",
+        "https://github.com/javier-sy/musa-dsl/blob/v0.49.1/docs/idioms.md > The root principle",
+        "https://github.com/javier-sy/musa-dsl/blob/v0.49.1/docs/subsystems/generative.md > When is this the answer",
+        "https://github.com/javier-sy/musa-dsl/blob/v0.49.1/docs/idioms.md > 3. Pitch",
+        "https://github.com/javier-sy/musa-dsl/blob/v0.49.1/docs/idioms.md > 4. Layers: musical intent vs. realization"
+      ]
+    },
+    {
+      "question": "writing the material as text instead of building it in code",
+      "kind": "docs",
+      "rank": 0,
+      "got": [
+        "https://github.com/javier-sy/musa-dsl/blob/v0.49.1/docs/idioms.md > 8. Musical material as text",
+        "https://github.com/javier-sy/musa-dsl/blob/v0.49.1/docs/idioms.md > Using this document",
+        "https://github.com/javier-sy/musa-dsl/blob/v0.49.1/docs/idioms.md > 4. Layers: musical intent vs. realization",
+        "https://github.com/javier-sy/musa-dsl/blob/v0.49.1/docs/guides/project-structure.md > Form as a state machine",
+        "https://github.com/javier-sy/musa-dsl/blob/v0.49.1/docs/guides/project-structure.md > (intro)"
+      ]
+    },
+    {
+      "question": "trills and mordents that turn into actual notes when played",
+      "kind": "docs",
+      "rank": 1,
+      "got": [
+        "https://github.com/javier-sy/musa-dsl/blob/v0.49.1/docs/subsystems/transcription.md > MIDI with Ornament Expansion",
+        "https://github.com/javier-sy/musa-dsl/blob/v0.49.1/docs/idioms.md > 9. Articulation and ornament",
+        "https://github.com/javier-sy/musa-dsl/blob/v0.49.1/docs/subsystems/transcription.md > When is this the answer",
+        "https://github.com/javier-sy/musa-dsl/blob/v0.49.1/docs/subsystems/transcription.md > MusicXML with Ornament Symbols",
+        "https://github.com/javier-sy/musa-dsl/blob/v0.49.1/docs/idioms.md > 8. Musical material as text"
+      ]
+    },
+    {
+      "question": "my composition is full of MIDI note numbers and durations in seconds",
+      "kind": "docs",
+      "rank": 1,
+      "got": [
+        "https://github.com/javier-sy/musa-dsl/blob/v0.49.1/docs/subsystems/midi.md > When is this the answer",
+        "https://github.com/javier-sy/musa-dsl/blob/v0.49.1/docs/idioms.md > 4. Layers: musical intent vs. realization",
+        "https://github.com/javier-sy/musa-dsl/blob/v0.49.1/docs/subsystems/neumas.md > Sending it somewhere",
+        "https://github.com/javier-sy/musa-dsl/blob/v0.49.1/docs/vocabulary.md > midi",
+        "https://github.com/javier-sy/musa-dsl/blob/v0.49.1/docs/subsystems/midi.md > What the recorder does, without any hardware"
+      ]
+    },
+    {
+      "question": "I want the piece as a score somebody can read on paper",
+      "kind": "docs",
+      "rank": 0,
+      "got": [
+        "https://github.com/javier-sy/musa-dsl/blob/v0.49.1/docs/subsystems/musicxml-builder.md > When is this the answer",
+        "https://github.com/javier-sy/musa-dsl/blob/v0.49.1/docs/idioms.md > 8. Musical material as text",
+        "https://github.com/javier-sy/musa-dsl/blob/v0.49.1/docs/subsystems/transcription.md > When is this the answer",
+        "https://github.com/javier-sy/musa-dsl/blob/v0.49.1/docs/vocabulary.md > transcription",
+        "https://github.com/javier-sy/musa-dsl/blob/v0.49.1/docs/idioms.md > 14. Event lists for querying or export"
+      ]
+    },
+    {
+      "question": "getting the notes out to an instrument, with the note-offs handled",
+      "kind": "docs",
+      "rank": 0,
+      "got": [
+        "https://github.com/javier-sy/musa-dsl/blob/v0.49.1/docs/subsystems/midi.md > When is this the answer",
+        "https://github.com/javier-sy/musa-dsl/blob/v0.49.1/docs/subsystems/neumas.md > Sending it somewhere",
+        "https://github.com/javier-sy/musa-dsl/blob/v0.49.1/docs/subsystems/midi.md > What the recorder does, without any hardware",
+        "https://github.com/javier-sy/musa-dsl/blob/v0.49.1/docs/vocabulary.md > midi",
+        "https://github.com/javier-sy/musa-dsl/blob/v0.49.1/docs/subsystems/midi.md > MIDIVoices - Polyphonic Voice Management"
+      ]
+    },
+    {
+      "question": "running the whole piece as fast as the machine can, to test it",
+      "kind": "docs",
+      "rank": 1,
+      "got": [
+        "https://github.com/javier-sy/musa-dsl/blob/v0.49.1/docs/guides/project-structure.md > The same piece in real time and offline",
+        "https://github.com/javier-sy/musa-dsl/blob/v0.49.1/docs/idioms.md > 15. Clocks",
+        "https://github.com/javier-sy/musa-dsl/blob/v0.49.1/docs/subsystems/neumas.md > Sending it somewhere",
+        "https://github.com/javier-sy/musa-dsl/blob/v0.49.1/docs/vocabulary.md > matrix",
+        "https://github.com/javier-sy/musa-dsl/blob/v0.49.1/docs/subsystems/sequencer.md > When is this the answer"
+      ]
+    },
+    {
+      "question": "following the tempo of a DAW instead of setting my own",
+      "kind": "docs",
+      "rank": 0,
+      "got": [
+        "https://github.com/javier-sy/musa-dsl/blob/v0.49.1/docs/subsystems/transport.md > When is this the answer",
+        "https://github.com/javier-sy/musalce-server/blob/v0.8.1/docs/architecture.md > Accessing the DAW (`daw.*`)",
+        "https://github.com/javier-sy/musa-dsl/blob/v0.49.1/docs/guides/project-structure.md > Control arriving from outside",
+        "https://github.com/javier-sy/musa-dsl/blob/v0.49.1/docs/guides/project-structure.md > The same piece in real time and offline",
+        "https://github.com/javier-sy/musa-dsl/blob/v0.49.1/docs/vocabulary.md > transport"
+      ]
+    },
+    {
+      "question": "a gesture drawn as a trajectory through several dimensions at once",
+      "kind": "docs",
+      "rank": 0,
+      "got": [
+        "https://github.com/javier-sy/musa-dsl/blob/v0.49.1/docs/idioms.md > 13. Multiparametric gesture",
+        "https://github.com/javier-sy/musa-dsl/blob/v0.49.1/docs/subsystems/matrix.md > When is this the answer",
+        "https://github.com/javier-sy/musa-dsl/blob/v0.49.1/docs/idioms.md > 11. Several layers of events in time",
+        "https://github.com/javier-sy/musa-dsl/blob/v0.49.1/docs/subsystems/datasets.md > When is this the answer",
+        "https://github.com/javier-sy/musa-dsl/blob/v0.49.1/docs/subsystems/datasets.md > Dataset Hierarchy"
+      ]
+    },
+    {
+      "question": "how should I organise the files of a piece so I can reload it while it plays",
+      "kind": "docs",
+      "rank": 0,
+      "got": [
+        "https://github.com/javier-sy/musa-dsl/blob/v0.49.1/docs/guides/project-structure.md > Two files: infrastructure and composition",
+        "https://github.com/javier-sy/musa-dsl/blob/v0.49.1/docs/guides/project-structure.md > (intro)",
+        "https://github.com/javier-sy/musa-dsl/blob/v0.49.1/docs/guides/project-structure.md > Reaching the infrastructure from the score",
+        "https://github.com/javier-sy/musa-dsl/blob/v0.49.1/docs/subsystems/repl.md > When is this the answer",
+        "https://github.com/javier-sy/musa-dsl/blob/v0.49.1/docs/guides/project-structure.md > Form as a state machine"
+      ]
+    },
+    {
+      "question": "notes keep sounding after I stop the transport",
+      "kind": "docs",
+      "rank": 0,
+      "got": [
+        "https://github.com/javier-sy/musa-dsl/blob/v0.49.1/docs/guides/project-structure.md > Stopping",
+        "https://github.com/javier-sy/musa-dsl/blob/v0.49.1/docs/vocabulary.md > transport",
+        "https://github.com/javier-sy/musa-dsl/blob/v0.49.1/docs/subsystems/transport.md > When is this the answer",
+        "https://github.com/javier-sy/musalce-server/blob/v0.8.1/docs/architecture.md > Stop/Play semantics",
+        "https://github.com/javier-sy/musa-dsl/blob/v0.49.1/docs/subsystems/transport.md > The lifecycle, run"
+      ]
+    },
+    {
+      "question": "incoming OSC messages should change what the sequencer plays",
+      "kind": "docs",
+      "rank": 0,
+      "got": [
+        "https://github.com/javier-sy/musa-dsl/blob/v0.49.1/docs/guides/project-structure.md > Control arriving from outside",
+        "https://github.com/javier-sy/musa-dsl/blob/v0.49.1/docs/subsystems/neumas.md > Sending it somewhere",
+        "https://github.com/javier-sy/musalce-server/blob/v0.8.1/docs/architecture.md > Accessing the Stream Deck (`on :event` and `surface[:event]`)",
+        "https://github.com/javier-sy/musalce-server/blob/v0.8.1/docs/architecture.md > OSC handler protocol",
+        "https://github.com/javier-sy/musa-dsl/blob/v0.49.1/docs/subsystems/sequencer.md > When is this the answer"
+      ]
+    },
+    {
+      "question": "evaluating code from my editor into a running piece",
+      "kind": "docs",
+      "rank": 0,
+      "got": [
+        "https://github.com/javier-sy/musa-dsl/blob/v0.49.1/docs/subsystems/repl.md > When is this the answer",
+        "https://github.com/javier-sy/musa-dsl/blob/v0.49.1/docs/subsystems/repl.md > Use Cases",
+        "https://github.com/javier-sy/musa-dsl/blob/v0.49.1/docs/subsystems/repl.md > (intro)",
+        "https://github.com/javier-sy/musalce-server/blob/v0.8.1/docs/architecture.md > When to use this (vs the standalone REPL)",
+        "https://github.com/javier-sy/musa-dsl/blob/v0.49.1/docs/subsystems/repl.md > Communication Protocol"
+      ]
+    },
+    {
+      "question": "a complete piece that uses Markov chains for its melodic line",
+      "kind": "demo_readme",
+      "rank": 0,
+      "got": [
+        "https://github.com/javier-sy/musadsl-demo/blob/main/demo-05-markov/README.md > Descripción",
+        "https://github.com/javier-sy/musadsl-demo/blob/main/demo-05-markov/README.md > Cadenas de Markov",
+        "https://github.com/javier-sy/musadsl-demo/blob/main/demo-05-markov/README.md > Código clave",
+        "https://github.com/javier-sy/musadsl-demo/blob/main/demo-05-markov/README.md > (intro)",
+        "https://github.com/javier-sy/musadsl-demo/blob/main/demo-05-markov/README.md > Buenas prácticas"
+      ]
+    },
+    {
+      "question": "wiring a TimerClock, a transport and MIDI voices together",
+      "kind": "demo_code",
+      "rank": 1,
+      "got": [
+        "https://github.com/javier-sy/musadsl-demo/blob/main/demo-14-clock-modes/musa/main_master.rb > TimerClock requiere inicio explícito",
+        "https://github.com/javier-sy/musadsl-demo/blob/main/demo-03-canon/musa/main.rb > TimerClock requiere inicio explícito",
+        "https://github.com/javier-sy/musadsl-demo/blob/main/demo-22-multiphase/musa/main.rb > TimerClock requiere inicio explícito",
+        "https://github.com/javier-sy/musadsl-demo/blob/main/demo-21-fibonacci-episodes/musa/main.rb > TimerClock requiere inicio explícito",
+        "https://github.com/javier-sy/musadsl-demo/blob/main/demo-19-advanced-series/musa/main.rb > TimerClock requiere inicio explícito"
+      ]
+    },
+    {
+      "question": "interpolating between two rhythmic patterns in tick space",
+      "kind": "best_practice",
+      "rank": 0,
+      "got": [
+        "https://github.com/javier-sy/nota-plugin/blob/main/src/data/best-practices/tick-aligned-durations.md > Description",
+        "https://github.com/javier-sy/nota-plugin/blob/main/src/data/best-practices/tick-aligned-durations.md > Example",
+        "https://github.com/javier-sy/nota-plugin/blob/main/src/data/best-practices/tick-aligned-durations.md > (intro)",
+        "https://github.com/javier-sy/nota-plugin/blob/main/src/data/best-practices/tick-aligned-durations.md > Anti-pattern",
+        "https://github.com/javier-sy/nota-plugin/blob/main/src/data/best-practices/markov-blending.md > Example"
+      ]
+    },
+    {
+      "question": "blending two Markov transition tables with a control parameter",
+      "kind": "best_practice",
+      "rank": 0,
+      "got": [
+        "https://github.com/javier-sy/nota-plugin/blob/main/src/data/best-practices/markov-blending.md > Description",
+        "https://github.com/javier-sy/nota-plugin/blob/main/src/data/best-practices/markov-blending.md > Example",
+        "https://github.com/javier-sy/nota-plugin/blob/main/src/data/best-practices/markov-blending.md > (intro)",
+        "https://github.com/javier-sy/nota-plugin/blob/main/src/data/best-practices/tick-aligned-durations.md > Example",
+        "https://github.com/javier-sy/nota-plugin/blob/main/src/data/best-practices/tick-aligned-durations.md > Description"
+      ]
+    }
+  ]
+}

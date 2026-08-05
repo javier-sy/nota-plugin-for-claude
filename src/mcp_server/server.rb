@@ -1,38 +1,94 @@
 #!/usr/bin/env ruby
 # frozen_string_literal: true
 
-# MCP server exposing MusaDSL knowledge base tools (17 tools).
+# MCP server exposing MusaDSL knowledge base tools.
 
 require "mcp"
 
 require_relative "config"
 require_relative "search"
+require_relative "lint"
+
+# The eight layers, in ONE place.
+#
+# Every tool below quotes from this. It is not repeated in the skills, because a
+# rule that lives in eleven files is a rule that will disagree with itself: the
+# skills cite the contract, the contract lives here, and when it changes it
+# changes once.
+LAYERS = <<~LAYERS
+  Each kind answers a different question, and asking the wrong one gets a fluent
+  answer to a question you did not have:
+
+  - `docs`           the mental model: WHEN is this the answer, where the boundary
+                     is, what the surprise is. Ask it with the SHAPE OF THE PROBLEM,
+                     never with the name of the solution you already picked.
+  - `api`            the contract: what it does exactly, with what signature. Ask
+                     with an identifier -- and prefer api_reference, which looks
+                     names up instead of guessing at them.
+  - `demo_code`      the wiring: how a working case is assembled. NEVER evidence
+                     for a choice of form.
+  - `demo_readme`    the public precedent: does a piece like this exist.
+  - `gem_readme`     the ecosystem: which gem, what setup.
+  - `best_practice`  the convention: how this is done HERE.
+  - `private_works`  the user's own voice: how they solved it before.
+  - `analysis`       what that voice means: their tendencies, their trajectory.
+
+  Two rules that hold across all of them:
+
+  - A demo never justifies a choice of form. It shows how something is wired, not
+    when it is the right thing to wire.
+  - A `docs` snippet ROUTES; it does not decide. Read the document whole with
+    get_doc before resting an argument on it.
+LAYERS
 
 class SearchTool < MCP::Tool
   description(
-    "Search the MusaDSL knowledge base semantically. " \
-    "Returns relevant passages from documentation, API, examples, private works, and composition analyses with source attribution."
+    "Search the MusaDSL knowledge base. One kind per query, several queries per call: " \
+    "each is ranked on its own, under its own heading, and nothing is merged.\n\n" \
+    "Consulting is formulating SEVERAL DIFFERENT QUESTIONS, one per layer that has " \
+    "something to say. Ask the conceptual layer what shape the problem is, the API " \
+    "what a name means, the demos how a thing is wired -- and relate the answers " \
+    "yourself. That relating is the work; no ranking can do it for you.\n\n" + LAYERS
   )
 
   input_schema(
     properties: {
-      query: {
-        type: "string",
-        description: 'Natural language query (e.g. "how to create a Markov melody", "series operations for filtering")'
-      },
-      kind: {
-        type: "string",
-        description: 'Filter by content type. Options: "all", "docs", "api", "demo_readme", "demo_code", "gem_readme", "private_works", "analysis".',
-        enum: %w[all docs api demo_readme demo_code gem_readme private_works analysis best_practice],
-        default: "all"
+      queries: {
+        type: "array",
+        description: "One entry per layer you need. Two or three is usual; one is fine when only one layer applies.",
+        items: {
+          type: "object",
+          properties: {
+            kind: {
+              type: "string",
+              description: "Which layer to ask. Required: there is no undifferentiated search.",
+              enum: %w[docs api demo_readme demo_code gem_readme best_practice private_works analysis]
+            },
+            query: {
+              type: "string",
+              description: 'Phrased for THIS layer. For `docs`, the shape of the problem ("a plan of sections each with a duration"), not the verb you had in mind.'
+            },
+            n_results: {
+              type: "integer",
+              description: "How many results from this layer (1-10). Fewer for contracts, more for concepts.",
+              default: 5
+            }
+          },
+          required: %w[kind query]
+        }
       }
     },
-    required: ["query"]
+    required: ["queries"]
   )
 
   class << self
-    def call(query:, kind: "all", server_context:)
-      result = NotaKnowledgeBase::Search.semantic_search(query, kind)
+    def call(queries:, server_context:)
+      specs = Array(queries).collect do |q|
+        h = q.respond_to?(:transform_keys) ? q.transform_keys(&:to_sym) : q
+        { kind: h[:kind], query: h[:query], n_results: h[:n_results] }
+      end
+
+      result = NotaKnowledgeBase::Search.multi_search(specs)
       MCP::Tool::Response.new([{ type: "text", text: result }])
     end
   end
@@ -40,19 +96,22 @@ end
 
 class ApiReferenceTool < MCP::Tool
   description(
-    "Look up exact API reference for a MusaDSL module or method. " \
-    "Returns API documentation including method signatures, parameters, return types, and usage examples."
+    "Look up a MusaDSL identifier BY NAME. Exact match first, then prefix, then -- " \
+    "clearly labelled as something else -- the nearest chunks semantically.\n\n" \
+    "It can say NO. When it reports that a name is not in the indexed API, that is " \
+    "information: check rubydoc.info before telling the user the method does not exist, " \
+    "and never invent one to fill the gap."
   )
 
   input_schema(
     properties: {
       module_name: {
         type: "string",
-        description: 'Module name (e.g. "Series", "Markov", "Sequencer", "Scales", "MIDIVoices", "NeumaDecoder", "Transport")'
+        description: 'Module or class name (e.g. "Series", "Markov", "Sequencer", "Scales", "MIDIVoices", "Transport")'
       },
       method: {
         type: "string",
-        description: 'Optional method name (e.g. "map", "next_value", "play", "note", "chord"). Leave empty for module overview.',
+        description: 'Optional method name (e.g. "map", "next_value", "play", "note"). Leave empty for the module itself.',
         default: ""
       }
     },
@@ -67,17 +126,102 @@ class ApiReferenceTool < MCP::Tool
   end
 end
 
+class GetDocTool < MCP::Tool
+  description(
+    "Read a whole musa-dsl document out of the INSTALLED gem.\n\n" \
+    "Use this after a `docs` search has told you WHICH document discusses your " \
+    "problem. The snippet routes; this decides. A boundary between two verbs lives " \
+    "in how a document relates its own parts, not in the fragment that most " \
+    "resembled your query -- so no choice of form should rest on a snippet.\n\n" \
+    "It reads the version the user actually has installed, and says which."
+  )
+
+  input_schema(
+    properties: {
+      name: {
+        type: "string",
+        description: 'Document name, as `list_docs` gives it (e.g. "subsystems/series", "idioms", "guides/project-structure", "vocabulary").'
+      }
+    },
+    required: ["name"]
+  )
+
+  class << self
+    def call(name:, server_context:)
+      result = NotaKnowledgeBase::Search.get_doc(name)
+      MCP::Tool::Response.new([{ type: "text", text: result }])
+    end
+  end
+end
+
+class ListDocsTool < MCP::Tool
+  description(
+    "List the musa-dsl documents available to read whole with `get_doc`, from the " \
+    "installed gem. Enumeration, not recommendation: which one you need is your judgement."
+  )
+
+  class << self
+    def call(server_context:)
+      result = NotaKnowledgeBase::Search.list_docs
+      MCP::Tool::Response.new([{ type: "text", text: result }])
+    end
+  end
+end
+
+class LintTool < MCP::Tool
+  description(
+    "Read MusaDSL composition code and report what a reader can see in the text. " \
+    "**Run it before showing code to the user — every time, without exception.**\n\n" \
+    "It needs no API key, no database and no network, so it works when everything " \
+    "else is unreachable, which is exactly when guessing is most tempting.\n\n" \
+    "Two lists, and they are not the same thing. *Certain* findings are facts about " \
+    "the text: a syntax error, a `1/4` that is integer zero, a constructor in a file " \
+    "that never included its module. Fix those. *Worth arguing* findings are shapes " \
+    "that are usually the generalist reflex and occasionally exactly right — **the " \
+    "lint points, you judge**: change it, or say in one line why this is the case " \
+    "where the reflex is correct. Passing over one in silence is the one thing that " \
+    "is not acceptable.\n\n" \
+    "A clean report says the text is clean. It says NOTHING about whether the form " \
+    "is right; that is the modelling table's job and no regular expression can do it."
+  )
+
+  input_schema(
+    properties: {
+      code: {
+        type: "string",
+        description: "The Ruby composition code about to be shown or written."
+      },
+      filename: {
+        type: "string",
+        description: "Optional name, used only in messages (e.g. \"score.rb\").",
+        default: ""
+      }
+    },
+    required: ["code"]
+  )
+
+  class << self
+    def call(code:, filename: "", server_context:)
+      name = filename.to_s.empty? ? nil : filename
+      MCP::Tool::Response.new([{ type: "text", text: NotaKnowledgeBase::Lint.report(code, filename: name) }])
+    end
+  end
+end
+
 class SimilarWorksTool < MCP::Tool
   description(
-    "Find similar works, demos, or composition examples. " \
-    "Returns similar demo projects, composition examples, and related analyses with descriptions and key code patterns used."
+    "Find works resembling a description. Each collection is ranked SEPARATELY and " \
+    "labelled: public demos apart from the user's own pieces and analyses.\n\n" \
+    "They are different evidence. A precedent somebody else set is not the same thing " \
+    "as something you did yourself, and merging them into one ranking lets whichever " \
+    "happens to sit nearer hide the other."
   )
 
   input_schema(
     properties: {
       description: {
         type: "string",
-        description: 'Description of the composition technique or style (e.g. "canon using Fibonacci rhythms", "generative harmonic progression with Markov chains")'
+        description: 'The piece as you would describe it musically (e.g. "canon over Fibonacci rhythms", "harmony that drifts by weighted steps")'
       }
     },
     required: ["description"]
@@ -86,54 +230,6 @@ class SimilarWorksTool < MCP::Tool
   class << self
     def call(description:, server_context:)
       result = NotaKnowledgeBase::Search.similar_works(description)
-      MCP::Tool::Response.new([{ type: "text", text: result }])
-    end
-  end
-end
-
-class DependenciesTool < MCP::Tool
-  description(
-    "Get the dependency chain / setup requirements for a concept. " \
-    "Returns what needs to be set up (gems, objects, configuration) to use this concept, in the correct order."
-  )
-
-  input_schema(
-    properties: {
-      concept: {
-        type: "string",
-        description: 'The MusaDSL concept to check dependencies for (e.g. "ornaments", "MIDI output", "live coding", "MusicXML export")'
-      }
-    },
-    required: ["concept"]
-  )
-
-  class << self
-    def call(concept:, server_context:)
-      result = NotaKnowledgeBase::Search.dependency_chain(concept)
-      MCP::Tool::Response.new([{ type: "text", text: result }])
-    end
-  end
-end
-
-class PatternTool < MCP::Tool
-  description(
-    "Get a code pattern for a specific composition technique. " \
-    "Returns working Ruby code pattern with comments explaining each part."
-  )
-
-  input_schema(
-    properties: {
-      technique: {
-        type: "string",
-        description: 'The technique to get a pattern for (e.g. "canon", "chord progression", "section chaining", "polyrhythm", "generative melody")'
-      }
-    },
-    required: ["technique"]
-  )
-
-  class << self
-    def call(technique:, server_context:)
-      result = NotaKnowledgeBase::Search.code_pattern(technique)
       MCP::Tool::Response.new([{ type: "text", text: result }])
     end
   end
@@ -558,7 +654,7 @@ module NotaKnowledgeBase
         "MusaDSL knowledge base server. Provides semantic search over " \
         "documentation, API reference, demo examples, and composition works " \
         "for the MusaDSL algorithmic composition framework in Ruby.",
-      tools: [SearchTool, ApiReferenceTool, SimilarWorksTool, DependenciesTool, PatternTool, CheckSetupTool,
+      tools: [SearchTool, ApiReferenceTool, GetDocTool, ListDocsTool, LintTool, SimilarWorksTool, CheckSetupTool,
               ListWorksTool, AddWorkTool, RemoveWorkTool, IndexStatusTool,
               GetAnalysisFrameworkTool, SaveAnalysisFrameworkTool, ResetAnalysisFrameworkTool, AddAnalysisTool,
               GetInspirationFrameworkTool, SaveInspirationFrameworkTool, ResetInspirationFrameworkTool,

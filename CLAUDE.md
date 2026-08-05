@@ -22,14 +22,11 @@ nota-plugin/                      # source repo (harness-agnostic)
 │   │   ├── db.rb                 #     sqlite-vec database management
 │   │   ├── ensure_db.rb          #     Auto-download knowledge.db on session start
 │   │   └── knowledge.db          #     Public knowledge base (gitignored, auto-downloaded)
-│   ├── rules/                    #   Static reference (always in LLM context)
-│   │   ├── musadsl-reference.md  #     Condensed API reference (~700 lines)
-│   │   ├── best-practices.md     #     Condensed best practices (23 items)
-│   │   ├── musadsl-philosophy.md
-│   │   └── think-journal.md
+│   ├── rules/                    #   Always in context — assistant behaviour only
+│   │   └── think-journal.md      #     (musa-dsl's own docs come from the gem)
 │   ├── defaults/                 #   Default frameworks (analysis, inspiration)
 │   ├── data/
-│   │   └── best-practices/       #     Global best practice source files (23 .md)
+│   │   └── best-practices/       #     The user's own practices (4 .md)
 │   └── skills/<name>/SKILL.md    #   10 skills in superset format with {{cmd:X}} placeholders
 ├── targets/                      # Per-harness generation templates
 │   ├── claude-code.yml           #   → dist/claude-code/ (plugin.json, .mcp.json, hooks)
@@ -38,7 +35,6 @@ nota-plugin/                      # source repo (harness-agnostic)
 │   ├── generate.rb               #   Generator: src/ + targets/ → dist/<harness>/
 │   └── templates/
 │       └── opencode-index.ts     #   TS plugin wrapper template for opencode
-├── prompts/                      # Regeneration prompts for maintainers
 ├── .claude-plugin/
 │   └── marketplace.json          # Marketplace catalog (source → github ref claude-release)
 ├── .github/workflows/
@@ -58,9 +54,8 @@ The MCP server is harness-agnostic: `src/mcp_server/config.rb` reads `NOTA_USER_
 
 | File | Role | When to update |
 |------|------|----------------|
-| `src/rules/musadsl-reference.md` | Condensed API reference, always in context | When musa-dsl source or demos change |
-| `src/rules/best-practices.md` | Condensed best practices summary, always in context | When best practices are added/modified |
-| `src/data/best-practices/*.md` | Full best practice source files (embeddable) | When extracting new patterns |
+| `src/mcp_server/musa_docs.rb` | Reads musa-dsl's `docs/idioms.md` and `docs/vocabulary.md` from the **installed gem** into context at session start | When the version floor moves, or another document has to be always-present |
+| `src/data/best-practices/*.md` | The **user's own** practices. Anything that describes musa-dsl itself belongs in musa-dsl's documentation, not here | When extracting a pattern that is genuinely the composer's and not the framework's |
 | `src/manifest.yml` | Neutral source of truth (name, version, skills, mcp, instructions) | When structure/version/skills change |
 | `src/mcp_server/config.rb` | Harness-specific config surface (3 env vars) | When adding a new harness target |
 | `targets/*.yml` | Per-harness generation templates | When a harness's output format changes |
@@ -73,13 +68,22 @@ The MCP server is harness-agnostic: `src/mcp_server/config.rb` reads `NOTA_USER_
 
 ### When musa-dsl source code or documentation changes
 
-The API reference and knowledge base may be outdated.
+The knowledge base may be outdated. **There is nothing to regenerate by hand.**
+The plugin no longer keeps a condensed copy of musa-dsl's API or philosophy: the
+conceptual layer comes from the installed gem at session start
+(`src/mcp_server/musa_docs.rb`), and `docs/vocabulary.md` is generated inside
+musa-dsl by its own `tools/vocabulary.rb`, with a spec that fails when it is
+stale. A prompt that asks a model to re-read the sources and rewrite a summary
+is how a false claim gets promoted to a rule; that is why those prompts are gone.
 
-1. **Regenerate `src/rules/musadsl-reference.md`** — follow the prompt in `prompts/regenerate-reference.md`. This reads all docs and source code from `../musa-dsl/` and rewrites the reference. Target: ~400-700 lines, accuracy over brevity, code is authoritative over docs.
+1. **Rebuild knowledge.db** — run `make build` (requires `VOYAGE_API_KEY`). This re-chunks all sources and re-embeds.
 
-2. **Rebuild knowledge.db** — run `make build` (requires `VOYAGE_API_KEY`). This re-chunks all sources and re-embeds.
+2. **Verify** — run `make verify-server` to confirm the MCP server starts.
 
-3. **Verify** — run `make verify-server` to confirm the MCP server starts.
+3. **If musa-dsl's documentation gained something the assistant must have BEFORE
+   it is asked** — a new symptom index, say — add it to `MusaDocs::ALWAYS` and
+   raise `MusaDocs::FLOOR` to the version that carries it. Anything that can wait
+   for a question is not always-context: it is read on request.
 
 ### When musadsl-demo changes
 
@@ -89,24 +93,31 @@ Demos affect both the knowledge base (demo code + READMEs are chunked) and poten
 
 2. **If best practices change** — follow the "When best practices change" workflow below.
 
-3. **Update demo index** — the demo index table at the end of `src/rules/musadsl-reference.md` must list all demos. Regenerate the reference if demos were added/removed.
-
-4. **Rebuild knowledge.db** — `make build`.
+3. **Rebuild knowledge.db** — `make build`. The demos are found by semantic
+   similarity (`demo_readme`, `demo_code`); there is no index of them to keep in
+   step.
 
 ### When best practices change
 
-Best practices live in three places that must stay in sync:
+**First ask where it belongs.** A practice whose justification cites a property
+of musa-dsl is not a practice, it is documentation of musa-dsl, and it goes to
+musa-dsl — to `docs/guides/` if it is craft, to the relevant subsystem document
+if it is a fact. What stays here is what is justified by how *this composer*
+works. Nineteen of the original twenty-three left under that test.
+
+What stays lives in two places that must agree:
 
 1. **Source files** — `src/data/best-practices/*.md` (one file per practice, full content with example and anti-pattern)
-2. **Condensed summary** — `src/rules/best-practices.md` (numbered list, one line per practice, always in LLM context)
-3. **Knowledge base** — embedded in `knowledge.db` as `kind: "best_practice"` chunks
+2. **Knowledge base** — embedded in `knowledge.db` as `kind: "best_practice"` chunks
 
 When adding, modifying, or removing practices:
 
 1. Create/edit/delete the source file in `src/data/best-practices/`
-2. Update `src/rules/best-practices.md` to reflect the change (add/edit/remove the corresponding numbered item)
-3. Update the count in `README.md` (search for "practices" — appears in the best-practices skill description and in the project structure)
-4. Rebuild knowledge.db — `make build`
+2. Update the count in `README.md` (search for "practices" — appears in the best-practices skill description and in the project structure)
+3. Rebuild knowledge.db — `make build`, and check the `best_practice` count it
+   prints. A source that yields zero is a bug, not an empty collection: that is
+   exactly what went unnoticed while the chunker looked for the practices at
+   their pre-generator path.
 
 ### When skills change
 

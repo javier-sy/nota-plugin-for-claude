@@ -34,9 +34,9 @@ Help the user generate ideas for algorithmic compositions. Expand the creative s
    - **Reviewing their practice** — wants to reflect on patterns across their works
    - **Resuming previous thinking** — wants to pick up an active thread from the journal
 
-5. **If working from an existing composition**: read the code from the filesystem and/or search for previous analyses with `search(kind: "analysis")` to understand what the user has already done.
+5. **If working from an existing composition**: read the code from the filesystem and/or search for previous analyses with `search` using `kind: "analysis"` to understand what the user has already done.
 
-6. **If the user has previous analyses**: search with `search(kind: "analysis")` to detect patterns in their practice — recurring techniques, preferred tools, aesthetic tendencies — and use this to suggest new, unexplored directions.
+6. **If the user has previous analyses**: search `kind: "analysis"` to detect patterns in their practice — recurring techniques, preferred tools, aesthetic tendencies — and use this to suggest new, unexplored directions.
 
 7. **Read the inspiration framework** by calling the `get_inspiration_framework` MCP tool. Use its dimensions as lenses to generate ideas.
 
@@ -46,15 +46,33 @@ Help the user generate ideas for algorithmic compositions. Expand the creative s
    - Don't cover all dimensions mechanically — focus on the ones most relevant to the user's context
    - Avoid repeating ideas already explored or discarded in the journal
 
-9. **Verify BEFORE showing** — for every idea that references MusaDSL tools, classes, methods, or patterns:
-   - Call `search` and/or `api_reference` to confirm the classes, methods, and parameters actually exist
-   - Call `pattern` to retrieve working code patterns for the technique
-   - **Only after verification**, include the technical mapping in the idea
-   - If you cannot verify something, describe the idea conceptually (musical intention, aesthetic direction) WITHOUT code. Never show a code snippet that hasn't been checked against the knowledge base.
+9. **Verify BEFORE showing, and consult LESS than you want to.**
+
+   - `api_reference` for every class, method and parameter you are about to name.
+     It can say no; a no means describe the idea in musical terms and stop there.
+   - `demo_readme` when you want to know whether a piece like this exists already.
+   - `analysis` and `private_works` for the user's own context — what they have
+     done, what they keep doing.
+   - **`docs` does not enter early ideation, and that is deliberate.** The
+     conceptual layer answers *when is this the right form*, which is exactly the
+     question that closes a possibility down. Asked at the moment of imagining, it
+     turns a list of ideas into a list of tools, and the reason to be here rather
+     than in {{cmd:code}} is that nothing has been decided yet. It is cheap to
+     read now that whole documents are one call away — which is precisely why this
+     has to be written down, or the next revision will "improve" this skill by
+     adding it.
+
+     The one exception is **feasibility**: *"can one serie be consumed at two
+     different paces?"* is a fact about the framework, and an idea resting on a
+     false one is not a wild idea, it is a wrong one. Never for choosing a tool.
+
+   - If you cannot verify something, describe the idea conceptually — musical
+     intention, aesthetic direction — WITHOUT code. Never show a snippet that has
+     not been checked.
 
 10. **For each verified idea, sketch the technical mapping** — briefly indicate:
     - Which MusaDSL tools would be involved (naming only verified classes and methods)
-    - What pattern or structure would be used (based on actual `pattern` results or knowledge base examples)
+    - What structure it would take, based on what the knowledge base actually returned
     - A rough sense of complexity (simple experiment vs. full composition)
     - If you include a code fragment, it MUST come from or be closely based on verified knowledge base results — never invent method signatures, parameter names, or class hierarchies
 
@@ -86,11 +104,11 @@ Connect musical traditions to MusaDSL implementations. "You want something like 
 Think about the relationship between process and result. What does the algorithm produce that you wouldn't compose by hand? Where is the piece's identity — in the code, in the output, or in the space between?
 
 ### Building on prior work
-When previous analyses are available, detect patterns: "Your last three pieces all used first-order Markov chains — what about higher-order? Or what about replacing Markov with Rules for a completely different generative character?"
+When previous analyses are available, detect patterns: "Your last three pieces all used first-order Markov chains — what about higher-order? Or what about replacing Markov with GenerativeGrammar for a completely different generative character?"
 
 ## Critical Guards
 
-- **NEVER show unverified code** — this is the most important rule. Every code fragment, class name, method call, or parameter you mention MUST be verified against the knowledge base first (`search`, `api_reference`, `pattern`). If you cannot verify it, describe the idea in musical/conceptual terms only. The user must never experience the frustration of trying an idea that fails because a class, method, or parameter doesn't exist.
+- **NEVER show unverified code** — this is the most important rule. Every code fragment, class name, method call, or parameter you mention MUST be verified against the knowledge base first (`api_reference` for names, `search` for the rest). If you cannot verify it, describe the idea in musical/conceptual terms only. The user must never experience the frustration of trying an idea that fails because a class, method, or parameter doesn't exist.
 - **Ideas can be wild; code must be correct** — be as provocative and creative as you want with musical concepts, aesthetic directions, and compositional strategies. But the moment you map an idea to MusaDSL code, that code must be accurate. When in doubt, leave the code to `{{cmd:code}}` and describe the idea conceptually.
 - **Use WebSearch** for external references — composers, techniques, traditions. Don't rely on general knowledge alone.
 - **Never launch `{{cmd:code}}` automatically** — thinking and coding are separate acts. Always leave a space for the user to reflect, choose, and refine before moving to implementation.

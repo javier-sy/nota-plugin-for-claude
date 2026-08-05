@@ -87,7 +87,7 @@ Manages best practices for MusaDSL composition projects. Practices can be:
 - **Listed, edited, removed** — full CRUD for your practice catalog
 
 Two layers:
-- **General practices** ship with the plugin (23 practices covering project structure, runtime patterns, coding style, neumas, generative techniques, and integration patterns), indexed in `knowledge.db` and searchable via `search` with `kind: "best_practice"`.
+- **General practices** ship with the plugin (4, covering generative and rhythmic techniques), indexed in `knowledge.db` and searchable via `search` with `kind: "best_practice"`. There used to be 23: the other nineteen described musa-dsl rather than a way of composing with it, and they moved into musa-dsl's own documentation — the craft of laying out a project into [`docs/guides/project-structure.md`](https://github.com/javier-sy/musa-dsl/blob/master/docs/guides/project-structure.md), the plain facts into the subsystem guides. A practice whose justification cites a property of the framework is documentation of the framework.
 - **User practices** are private, stored in `~/.config/nota/best-practices/`, indexed in `private.db`.
 
 `/nota:code` automatically searches best practices during its research step, so your consolidated patterns are applied when writing new code.
@@ -132,11 +132,27 @@ This section is for contributors who want to modify the plugin itself or rebuild
 
 ### Architecture
 
-The plugin has three knowledge layers:
+The plugin has three knowledge layers, and **it owns only one of them**.
 
-1. **Static reference** (`rules/musadsl-reference.md` + `rules/best-practices.md`) — always loaded in context
+1. **The framework's own conceptual layer**, read at session start from the
+   **installed musa-dsl gem** — `docs/idioms.md` (the catalogue of idioms, indexed
+   by symptom) and `docs/vocabulary.md` (every name the guides teach, on one
+   page). Nota does not keep a copy: musa-dsl is where those documents can be
+   falsified, by its own suite and its own doctest, and every copy of them that
+   ever lived here drifted from the original. Requires the gem, and nothing
+   else: there is no version floor. Each document is served if the installed gem
+   has it and named if it does not — `docs/vocabulary.md` arrives in 0.49.1, so an
+   older gem gets the idioms and is told the vocabulary is not in its version.
+   A floor would be an assertion about musa-dsl's history kept inside Nota, which
+   is the category of thing this whole layer exists to remove; what the plugin
+   owes the reader is not a verdict on which releases are fit but an accurate
+   statement of which one it read, and every response carries it.
 2. **Semantic search** (MCP server + sqlite-vec + Voyage AI embeddings) — retrieves relevant docs, API, and code examples on demand
 3. **Works catalog** — finds similar compositions from demos and private indexed works
+
+What the plugin does carry in context is how the **assistant** behaves
+(`rules/think-journal.md`, the frameworks in `defaults/`), which is its own
+business and nobody else's.
 
 Two separate databases:
 
@@ -213,14 +229,12 @@ nota/
 ├── defaults/                # Default configuration files
 │   ├── analysis-framework.md      # Default analysis framework (10 dimensions)
 │   └── inspiration-framework.md   # Default inspiration framework (9 dimensions)
-├── rules/                   # Static reference (always in context)
-│   ├── musadsl-reference.md       # Condensed API reference
-│   └── best-practices.md         # Condensed best practices reference
+├── rules/                   # Always in context — assistant behaviour only
+│   └── think-journal.md           # Persisting creative thinking
 ├── data/
-│   ├── best-practices/      # Global best practice source files (23 .md files)
+│   ├── best-practices/      # The user's own practices (4 .md files); what
+│   │                        #   describes musa-dsl itself lives in musa-dsl
 │   └── chunks/              # Generated JSONL chunks + manifest
-├── prompts/                 # Regeneration prompts for maintainers
-│   └── regenerate-reference.md        # How to regenerate musadsl-reference.md
 ├── mcp_server/              # Ruby MCP server + sqlite-vec
 │   ├── server.rb            # MCP tools (22 tools)
 │   ├── search.rb            # Dual-DB search (knowledge.db + private.db)

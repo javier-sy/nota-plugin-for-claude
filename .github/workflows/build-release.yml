@@ -63,6 +63,22 @@ jobs:
             --db-path src/mcp_server/knowledge.db \
             --embed
 
+      # The index is built; now find out whether it can be searched. A database
+      # that is well formed and answers the wrong document is indistinguishable
+      # from a good one until somebody asks it something, so ask it here rather
+      # than after it is released. The chunker already refuses to produce an
+      # empty kind; this refuses to publish an index that cannot route.
+      - name: Check the document contract with musa-dsl
+        env:
+          NOTA_MUSA_DSL_PATH: sources/musa-dsl
+        run: bundle exec ruby tools/contract-check.rb
+
+      - name: Retrieval battery
+        env:
+          VOYAGE_API_KEY: ${{ secrets.VOYAGE_API_KEY }}
+          KNOWLEDGE_DB_PATH: src/mcp_server/knowledge.db
+        run: bundle exec ruby tools/retrieval-battery.rb
+
       - name: Package knowledge DB
         run: gzip -c src/mcp_server/knowledge.db > knowledge.db.gz
 

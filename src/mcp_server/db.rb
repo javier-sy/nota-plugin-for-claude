@@ -9,6 +9,7 @@
 # Collections (kind values):
 #   docs, api, demo_readme, demo_code, gem_readme, private_works
 
+require "set"
 require "sqlite3"
 require "sqlite_vec"
 
@@ -148,6 +149,47 @@ module NotaKnowledgeBase
       end
     end
 
+    # Delete everything in the public collections that this build did not
+    # produce, and report what went.
+    #
+    # WHY. `upsert_chunks` inserts and replaces; it never removes. So a document
+    # deleted from a source repository stays in the index for ever, and keeps
+    # being retrieved and quoted as though it were current. That is not a
+    # hypothetical: `docs/api-reference.md` and `docs/README.md` were removed
+    # from musa-dsl on purpose -- the first because it served no reader, the
+    # second because it duplicated the main README -- and eleven of their chunks
+    # survived the next rebuild and were still answering questions.
+    #
+    # An index that only ever grows is an index that quietly becomes a museum of
+    # things that used to be true. Pruning is not an optimisation here, it is the
+    # difference between an index of the corpus and an index of its whole
+    # history.
+    #
+    # Only the public collections are pruned. The user's works and analyses live
+    # in the private database and are not produced by a build, so nothing here
+    # can decide they are stale.
+    def prune_absent(db, chunks)
+      keep = chunks.collect(&:id).to_set
+      public_kinds = COLLECTION_NAMES.collect { |k| "'#{k}'" }.join(", ")
+
+      present = db.execute("SELECT id, source FROM chunks WHERE kind IN (#{public_kinds})")
+      stale = present.reject { |row| keep.include?(row["id"]) }
+
+      return [] if stale.empty?
+
+      db.transaction do
+        stale.each_slice(500) do |slice|
+          ids = slice.collect { |row| row["id"] }
+          marks = (["?"] * ids.size).join(", ")
+
+          db.execute("DELETE FROM chunks_vec WHERE chunk_id IN (#{marks})", ids)
+          db.execute("DELETE FROM chunks WHERE id IN (#{marks})", ids)
+        end
+      end
+
+      stale.group_by { |row| row["source"] }.transform_values(&:size).sort_by { |_, n| -n }
+    end
+
     # Upsert chunks with Voyage AI embeddings into both tables.
     def upsert_chunks(db, chunks, embedder: nil, collection_override: nil)
       embedder ||= Voyage.document_embedder
@@ -209,56 +251,16 @@ module NotaKnowledgeBase
     # one. The table is small and a large `k` costs almost nothing.
     KNN_OVERSHOOT = 3
 
-    # The conceptual layer, and how much of an undifferentiated search is kept
-    # for it.
-    #
-    # WHY THIS EXISTS. Once the filtering bug above was fixed, `kind: "docs"`
-    # answers ten out of ten composition questions and lands on the right
-    # section -- "how do I loop a sequence of notes" comes back at
-    # `sequencer.md > When is this the answer`. The SAME questions asked with
-    # `kind: "all"` bring the conceptual layer into the top five three times out
-    # of ten. The demos bury it: 830 chunks of 2359, and a demo README describes
-    # what a piece does in the very register the question is asked in, so it wins
-    # on similarity fairly.
-    #
-    # That is the trap. An undifferentiated search rewards what RESEMBLES the
-    # question, and the layer that says *when is this the answer* does not
-    # resemble the question -- it answers it. Left to similarity alone, the
-    # assistant gets back examples that confirm the framing it already had, which
-    # is the failure the modelling gate exists to prevent.
-    #
-    # So reserve room rather than hope. Not a boost -- the conceptual results are
-    # still the nearest ones of their kind, and if there are none the slots go
-    # back to everybody else.
-    CONCEPTUAL_KIND = "docs"
-    CONCEPTUAL_QUOTA = 0.4
-
-    # ...and only when the conceptual layer is actually close to the question.
-    #
-    # Reserving room unconditionally pads a "signature of Chord#with_move" with
-    # two prose chunks that displace two API ones. Measured over the battery, the
-    # two cases separate cleanly by how far the nearest conceptual chunk sits
-    # from the nearest chunk overall: 1.19-1.24x for questions about what to do,
-    # 1.43-1.81x for questions about a signature. A question that already knows
-    # the name it is asking about does not need to be told when to use it.
-    #
-    # Calibrated on this corpus. What would invalidate it: a large change in the
-    # proportion of conceptual text, or a different embedding model -- the ratio
-    # is scale-free but the gap between the two populations may not survive
-    # either. Re-run tools like the F3 battery before trusting it after such a
-    # change.
-    CONCEPTUAL_PROXIMITY = 1.3
+    # NOTE. Between the fix above and this file's present shape there was a
+    # conceptual quota here: a reserved share of every undifferentiated search,
+    # held for `docs` so that the demos could not bury it. It worked, and it was
+    # the wrong answer to the right observation. Reserving room inside the server
+    # is the server deciding what the caller meant; the caller knows which layer
+    # it needs and now has to say so. `kind` is required, there is no `all`, and
+    # the quota is gone with the thing it was compensating for.
 
     def knn_fetch_limit(db, kind, n_results)
       counts = kind_counts(db)
-
-      # An undifferentiated search has to over-fetch too, and for the same
-      # reason: reserving room for the conceptual layer does nothing if the
-      # layer never reaches the candidate pool. Fifteen neighbours of a corpus
-      # where `docs` is one chunk in twenty contain, on average, less than one
-      # of them -- which is exactly what the measurement showed. Fetch as if the
-      # search were FOR the conceptual layer, and then let everybody compete.
-      kind = CONCEPTUAL_KIND if kind == "all"
 
       total = counts.values.sum
       of_kind = counts[kind].to_i
@@ -278,7 +280,7 @@ module NotaKnowledgeBase
 
     # Low-level KNN search: takes a pre-computed embedding, returns raw result hashes.
     # Does NOT call Voyage — caller is responsible for embedding the query.
-    def knn_search(db, query_embedding, kind: "all", n_results: 5)
+    def knn_search(db, query_embedding, kind:, n_results: 5)
       vec_blob = query_embedding.pack("f*")
 
       # Over-fetch to allow filtering, then trim to n_results
@@ -290,18 +292,13 @@ module NotaKnowledgeBase
         [vec_blob, fetch_limit]
       )
 
-      # Join with chunks table for metadata and filter by kind
+      # Join with chunks table for metadata and keep only the kind asked for.
       all_results = []
-      kinds_to_search = if kind == "all"
-                          COLLECTION_NAMES + [PRIVATE_COLLECTION, ANALYSIS_COLLECTION]
-                        else
-                          [kind]
-                        end
 
       knn_rows.each do |row|
         chunk = db.execute("SELECT * FROM chunks WHERE id = ?", [row["chunk_id"]]).first
         next unless chunk
-        next unless kinds_to_search.include?(chunk["kind"])
+        next unless chunk["kind"] == kind
 
         source      = chunk["source"] || "unknown"
         source      = source_to_github_url(db, source)
@@ -319,48 +316,25 @@ module NotaKnowledgeBase
 
       end
 
-      kind == "all" ? with_conceptual_quota(all_results, n_results) : all_results.first(n_results)
+      all_results.first(n_results)
     end
 
-    # Keeps the nearest results, but reserves part of them for the conceptual
-    # layer when the search did not ask for a kind.
-    #
-    # Order is preserved by distance within each group and across the merge, so
-    # a reader still sees the nearest thing first; what changes is only which
-    # ones survive the cut.
-    def with_conceptual_quota(results, n_results)
-      return results.first(n_results) if results.length <= n_results
+    def format_results(results, query, kind: nil, collection_size: nil)
+      if results.empty?
+        return "No `#{kind}` chunks are indexed at all (the collection is empty). " \
+               "This is an index problem, not an answer: nothing in this kind can be " \
+               "found until it is rebuilt." if kind && collection_size&.zero?
 
-      reserved = [(n_results * CONCEPTUAL_QUOTA).floor, 1].max
-      nearest = results.first["distance"].to_f
+        return "Nothing in `#{kind}` came back for: '#{query}'" if kind
 
-      conceptual = results
-                   .select { |r| r["kind"] == CONCEPTUAL_KIND }
-                   .select { |r| nearest.zero? || r["distance"].to_f / nearest <= CONCEPTUAL_PROXIMITY }
-                   .first(reserved)
-
-      return results.first(n_results) if conceptual.empty?
-
-      rest = (results - conceptual).first(n_results - conceptual.length)
-
-      (conceptual + rest).sort_by { |r| r["distance"] }
-    end
-
-    # Search for similar chunks using KNN, optionally filtering by kind.
-    # Returns formatted markdown string. Embeds the query via Voyage AI.
-    def search_collections(db, query, kind: "all", n_results: 5, embedder: nil)
-      embedder ||= Voyage.query_embedder
-
-      query_embedding = embedder.embed([query]).first
-      results = knn_search(db, query_embedding, kind: kind, n_results: n_results)
-      format_results(results, query)
-    end
-
-    def format_results(results, query)
-      return "No results found for: '#{query}'" if results.empty?
+        return "No results found for: '#{query}'"
+      end
 
       parts = results.each_with_index.map do |result, i|
         header = "### Result #{i + 1}"
+        header += " [#{result['kind']}]" unless result["kind"].to_s.empty?
+        header += " (distance #{format('%.3f', result['distance'])})" if result["distance"]
+
         source_info = "**Source**: #{result['source']}"
         source_info += " > #{result['section']}" unless result["section"].to_s.empty?
         source_info += " (#{result['module']})" unless result["module"].to_s.empty?
@@ -372,7 +346,9 @@ module NotaKnowledgeBase
         "#{header}\n#{source_info}\n\n#{content}"
       end
 
-      parts.join("\n\n---\n\n")
+      note = "_Distances are comparable only within this one query._"
+
+      "#{parts.join("\n\n---\n\n")}\n\n#{note}"
     end
 
     def collection_stats(db)

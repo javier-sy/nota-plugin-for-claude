@@ -21,6 +21,10 @@ module NotaKnowledgeBase
       end
     end
 
+    # Every kind a full build produces. Asserted non-empty at the end of
+    # chunk_all_sources -- see the note there.
+    EXPECTED_KINDS = %w[api docs demo_code demo_readme gem_readme best_practice].freeze
+
     module_function
 
     def stable_id(kind, source_path, index)
@@ -598,14 +602,30 @@ module NotaKnowledgeBase
         )
       end
 
-      # 7. Best practices (plugin's own data dir — works under either clone name)
-      plugin_dir = %w[nota-plugin nota-plugin-for-claude].find { |n| File.directory?(File.join(source_root, n, "data", "best-practices")) }
-      bp_dir = plugin_dir && File.join(source_root, plugin_dir, "data", "best-practices")
-      if bp_dir && File.directory?(bp_dir)
-        Dir.glob(File.join(bp_dir, "*.md")).sort.each do |md_file|
+      # 7. Best practices (plugin's own data dir).
+      #
+      # The candidates cover both clone names and both layouts: the practices
+      # moved under `src/` when the generator was introduced, and this kept
+      # looking for the old path. It found nothing, said nothing, and
+      # knowledge.db shipped with zero `best_practice` chunks for as long as
+      # that lasted -- which is why the assertion below exists. A source that
+      # yields nothing is reported, not skipped.
+      bp_dir = %w[nota-plugin nota-plugin-for-claude]
+               .product([%w[src data best-practices], %w[data best-practices]])
+               .collect { |name, parts| File.join(source_root, name, *parts) }
+               .find { |candidate| File.directory?(candidate) }
+
+      if bp_dir
+        practices = Dir.glob(File.join(bp_dir, "*.md")).sort
+        warn "WARNING: #{bp_dir} has no practices to index" if practices.empty?
+
+        practices.each do |md_file|
           rel = relative_path(md_file, source_root)
           all_chunks.concat(chunk_markdown(md_file, kind: "best_practice", source_label: rel))
         end
+      else
+        warn "WARNING: no best-practices directory found under #{source_root}; " \
+             "knowledge.db will have no best_practice chunks"
       end
 
       # Validate: no chunk should leak absolute filesystem paths
@@ -615,6 +635,30 @@ module NotaKnowledgeBase
         abort "ERROR: #{bad.length} chunks have absolute source paths (private filesystem info would leak into public DB).\n" \
               "Samples: #{samples.join(", ")}\n" \
               "This is likely a Unicode normalization mismatch between source_root and Dir.glob."
+      end
+
+      # Validate: every kind this build is supposed to produce produced something.
+      #
+      # This exists because it did not. The best-practice source directory moved
+      # under `src/` when the generator was introduced and the lookup above kept
+      # pointing at the old path; it found nothing, said nothing, and every
+      # knowledge.db released after that shipped with zero `best_practice`
+      # chunks. Skills went on instructing the assistant to search a kind that
+      # was not there, and the only symptom was an answer that quietly omitted
+      # what it could not find.
+      #
+      # A retrieval failure is silent by nature. The only defence is asserting
+      # what should be present, so absence has to announce itself.
+      counts = all_chunks.group_by { |c| c.metadata["kind"] }.transform_values(&:size)
+      empty = EXPECTED_KINDS.reject { |kind| counts[kind].to_i.positive? }
+
+      unless empty.empty?
+        abort "ERROR: no chunks produced for #{empty.join(", ")}.\n" \
+              "Got: #{counts.sort.map { |k, n| "#{k}=#{n}" }.join(" ")}\n" \
+              "Either a source repository is missing from #{source_root}, or a path in " \
+              "this file points somewhere the material no longer lives. Building anyway " \
+              "would ship a knowledge base that answers questions about #{empty.join(" and ")} " \
+              "with silence."
       end
 
       all_chunks

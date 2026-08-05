@@ -3,7 +3,7 @@
 # and emits dist/<harness>/ for each target.
 
 name: nota
-version: "0.11.1"
+version: "1.0.0"
 description: "Nota — MusaDSL composition assistant: learn the framework, code compositions, explore ideas, analyze music"
 author:
   name: Javier Sánchez Yeste
@@ -28,15 +28,18 @@ skills:
   - setup
 
 # Always-in-context reference files (paths relative to src/, copied to dist root)
+#
+# Only what defines how the ASSISTANT behaves lives here. Knowledge about
+# musa-dsl is not carried by the plugin any more: `docs/idioms.md` and
+# `docs/vocabulary.md` are read from the installed gem at session start
+# (mcp_server/musa_docs.rb), because that is the only place they can be
+# falsified, and a copy of them here drifted every time it existed.
 instructions:
-  - rules/musadsl-reference.md
-  - rules/best-practices.md
-  - rules/musadsl-philosophy.md
   - rules/think-journal.md
 
 # SessionStart hook script (only emitted by targets that support declarative hooks)
 hooks:
-  session_start: mcp_server/ensure_db.rb
+  session_start: mcp_server/session_start.rb
 
 # Shared assets copied verbatim into every dist/<target>/ (paths relative to src/)
 shared_assets:
