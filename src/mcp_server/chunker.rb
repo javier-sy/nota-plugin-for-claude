@@ -602,29 +602,40 @@ module NotaKnowledgeBase
         )
       end
 
-      # 7. Best practices (plugin's own data dir).
+      # 7. Best practices — the plugin's OWN, found relative to this file.
       #
-      # The candidates cover both clone names and both layouts: the practices
-      # moved under `src/` when the generator was introduced, and this kept
-      # looking for the old path. It found nothing, said nothing, and
-      # knowledge.db shipped with zero `best_practice` chunks for as long as
-      # that lasted -- which is why the assertion below exists. A source that
-      # yields nothing is reported, not skipped.
-      bp_dir = %w[nota-plugin nota-plugin-for-claude]
-               .product([%w[src data best-practices], %w[data best-practices]])
-               .collect { |name, parts| File.join(source_root, name, *parts) }
-               .find { |candidate| File.directory?(candidate) }
+      # They were looked up under `source_root` for a long time, and that was a
+      # category error with two consequences. Locally, `source_root` is the
+      # directory holding the sibling repositories, so the plugin happened to be
+      # inside it and the lookup worked until the practices moved under `src/`
+      # and it silently stopped. In CI, `source_root` is a directory of shallow
+      # clones that never contained the plugin at all, so it NEVER worked: every
+      # knowledge.db built by CI shipped with zero `best_practice` chunks, and
+      # nothing said so until the assertion below existed.
+      #
+      # These files are not a source repository. They are this plugin's own
+      # material and they live next to this file, wherever this file happens to
+      # be. The fallback candidates are kept only for the pre-generator layout.
+      bp_dir = [
+        File.expand_path("../data/best-practices", __dir__),
+        File.expand_path("../../data/best-practices", __dir__)
+      ].find { |candidate| File.directory?(candidate) }
 
       if bp_dir
         practices = Dir.glob(File.join(bp_dir, "*.md")).sort
         warn "WARNING: #{bp_dir} has no practices to index" if practices.empty?
 
         practices.each do |md_file|
-          rel = relative_path(md_file, source_root)
+          # Labelled relative to the PLUGIN, not to source_root: these files are
+          # the plugin's own and source_root need not contain them at all (in CI
+          # it does not). A label computed against a root that does not hold the
+          # file comes out absolute, which the guard below rightly refuses --
+          # filesystem paths must not travel in a public index.
+          rel = "nota-plugin/src/data/best-practices/#{File.basename(md_file)}"
           all_chunks.concat(chunk_markdown(md_file, kind: "best_practice", source_label: rel))
         end
       else
-        warn "WARNING: no best-practices directory found under #{source_root}; " \
+        warn "WARNING: no best-practices directory next to #{__dir__}; " \
              "knowledge.db will have no best_practice chunks"
       end
 
