@@ -2,7 +2,9 @@
 
 ## Project overview
 
-Nota is a **harness-agnostic** algorithmic composition assistant for the [MusaDSL](https://musadsl.yeste.studio) framework. Repo: [`javier-sy/nota-plugin`](https://github.com/javier-sy/nota-plugin) (renamed from `nota-plugin-for-claude`; the old URL redirects, so existing references keep working). The source lives in `src/` and a generator (`scripts/generate.rb`) emits per-harness plugin output (`dist/claude-code/`, `dist/opencode/`) from a neutral `src/manifest.yml` + per-target templates in `targets/`. Claude Code consumes the `claude-release` orphan branch; opencode consumes the npm package `nota-plugin-for-opencode`.
+Nota is a **harness-agnostic** algorithmic composition assistant for the [MusaDSL](https://musadsl.yeste.studio) framework. Repo: [`javier-sy/nota-plugin`](https://github.com/javier-sy/nota-plugin) (renamed from `nota-plugin-for-claude`; the old URL redirects, so existing references keep working). The source lives in `src/` and a generator (`scripts/generate.rb`) emits per-harness plugin output (`dist/claude-code/`, `dist/opencode/`) from a neutral `src/manifest.yml` + per-target templates in `targets/`.
+
+Each harness has its **own distribution registry**, and neither lives in this repo: Claude Code consumes [`javier-sy/claude-plugins`](https://github.com/javier-sy/claude-plugins) (the yeste.studio marketplace catalog plus a `nota/` directory, both written by this repo's CI); opencode consumes npm. This repo holds only source.
 
 It provides 10 interactive skills, a semantic search MCP server backed by sqlite-vec, and two knowledge databases (public `knowledge.db` + private `private.db`).
 
@@ -33,19 +35,18 @@ nota-plugin/                      # source repo (harness-agnostic)
 │   └── opencode.yml              #   → dist/opencode/ (package.json, index.ts, opencode.json)
 ├── scripts/
 │   ├── generate.rb               #   Generator: src/ + targets/ → dist/<harness>/
+│   ├── update-marketplace-entry.rb # Rewrites nota's entry in the shared catalog
 │   └── templates/
 │       └── opencode-index.ts     #   TS plugin wrapper template for opencode
-├── .claude-plugin/
-│   └── marketplace.json          # Marketplace catalog (source → github ref claude-release)
 ├── .github/workflows/
 │   ├── build-release.yml         # CI: build + release knowledge.db.gz
-│   └── generate-dist.yml         # CI: generate dist/ → push claude-release + npm publish
+│   └── generate-dist.yml         # CI: generate dist/ → publish to claude-plugins (+ npm)
 ├── Gemfile  Gemfile.lock         # Ruby deps: mcp, sqlite3, sqlite-vec (+ generator deps)
 ├── Makefile  .version  VERSION   # Build + version tooling
 ├── CLAUDE.md  README.md  LICENSE
 └── dist/                         # Generated output (gitignored, CI-published)
-    ├── claude-code/              #   → pushed to branch claude-release by CI
-    └── opencode/                 #   → published as nota-plugin-for-opencode on npm
+    ├── claude-code/              #   → copied into javier-sy/claude-plugins as nota/
+    └── opencode/                 #   → published on npm (currently held back)
 ```
 
 The MCP server is harness-agnostic: `src/mcp_server/config.rb` reads `NOTA_USER_DIR`, `NOTA_CMD_PREFIX`, `NOTA_GITHUB_REPO` from env, with Claude Code defaults. Each harness's generated config sets these env vars appropriately.
@@ -60,7 +61,7 @@ The MCP server is harness-agnostic: `src/mcp_server/config.rb` reads `NOTA_USER_
 | `src/mcp_server/config.rb` | Harness-specific config surface (3 env vars) | When adding a new harness target |
 | `targets/*.yml` | Per-harness generation templates | When a harness's output format changes |
 | `scripts/generate.rb` | The generator itself | When generation logic changes |
-| `.claude-plugin/marketplace.json` | Marketplace catalog (points at claude-release branch) | Every release |
+| `scripts/update-marketplace-entry.rb` | Rewrites this plugin's entry in the shared catalog of `javier-sy/claude-plugins`, leaving other plugins' entries alone | When the catalog's entry shape changes |
 | `README.md` | User-facing documentation | When features/counts change |
 | `src/mcp_server/chunker.rb` | Defines what gets chunked and how | When adding new content types |
 
@@ -132,7 +133,7 @@ Frontmatter: `name`, `description`, `version` (all preserved in source; `version
 Use `version.sh` from the ecosystem root (`MusaDSL/version.sh`):
 
 ```bash
-# 1. Bump version (updates VERSION + manifest.yml + marketplace.json via POST_VERSION_COMMAND)
+# 1. Bump version (updates VERSION + manifest.yml via POST_VERSION_COMMAND)
 ./version.sh new patch|minor|major nota-plugin
 
 # 2. Update README.md if any user-facing counts or features changed (manual)
@@ -144,7 +145,8 @@ export VOYAGE_API_KEY=<your-key>
 # 4. Publish: verify-server + tag + commit + push
 ./version.sh publish nota-plugin
 
-# 5. CI generates dist/ and publishes (claude-release branch + npm) via generate-dist.yml
+# 5. CI generates dist/ and publishes to javier-sy/claude-plugins via generate-dist.yml
+#    (npm is held back — see "Re-enabling the opencode channel")
 ```
 
 **Trigger knowledge.db release** — either:
@@ -162,9 +164,41 @@ Two workflows (both have `concurrency: cancel-in-progress` to coalesce redundant
 
 1. **`build-release.yml`** — builds and releases `knowledge.db.gz` as a GitHub Release. Triggered by `repository_dispatch` (`source-updated`) from the 7 source repos' `notify-plugin.yml`, manual dispatch, or push to main modifying `src/mcp_server/chunker.rb` or `src/mcp_server/embeddings.rb`. The concurrency guard prevents `db-<timestamp>` tag collisions when several sources push near-simultaneously.
 
-2. **`generate-dist.yml`** — runs `make generate`, pushes `dist/claude-code/` to the `claude-release` orphan branch (via `peaceiris/actions-gh-pages`), and publishes `dist/opencode/` as `nota-plugin-for-opencode` on npm. Triggered by push to main modifying `src/**`, `targets/**`, `scripts/**`, `Gemfile`, or `Gemfile.lock`.
+2. **`generate-dist.yml`** — runs `make generate` and publishes each distribution to its registry. Triggered by push to main modifying `src/**`, `targets/**`, `scripts/**`, `Gemfile`, or `Gemfile.lock`.
 
-   **⚠️ Fail-fast version check** — after Ruby setup, before generate/claude-release/npm-publish, the workflow reads the version from `src/manifest.yml` and queries `curl https://registry.npmjs.org/nota-plugin-for-opencode/<version>`. If that version **already exists on npm, the workflow FAILS** — neither `claude-release` nor npm is touched. This prevents silent divergence between Claude Code (rolling `claude-release`, updates every CI) and opencode (immutable npm, needs a bump). **Consequence: every push to main touching `src/targets/scripts/Gemfile` requires a version bump** (`cd ../.. && ./version.sh nota-plugin <new-version>`), otherwise CI goes red with an `::error::` pointing at the bump command. The `npm publish` step is unconditional — the fail-fast check already guaranteed the version is new.
+   **Claude Code channel** — clones `javier-sy/claude-plugins`, replaces its `nota/` directory with `dist/claude-code/`, runs `scripts/update-marketplace-entry.rb` to rewrite nota's catalog entry, and commits. Needs the `DIST_REPO_TOKEN` secret (a fine-grained PAT with `contents: write` on the distribution repo — `GITHUB_TOKEN` cannot reach another repo). The push retries with `pull --rebase` so two plugins publishing at once cannot lose each other's commit, and `knowledge.db` is deleted before committing in case a local build left one in `dist/`.
+
+   **Why the plugin ships next to the catalog** — Claude Code resolves a `"source": "./nota"` entry inside the already-cloned catalog. Any entry pointing at a *different* repo goes through a code path that builds a `git@github.com:` URL unconditionally, without checking whether SSH is configured, so installation fails for anyone using HTTPS-authenticated GitHub (CLI bug, present through 2.1.222). This is why the `claude-release` orphan branch was abandoned.
+
+   **⚠️ Fail-fast version check** — when the opencode channel is enabled, the workflow queries npm for the current version before publishing anything. If it **already exists on npm the workflow FAILS**, touching neither registry. This prevents silent divergence between Claude Code (rolling — updates every CI run) and opencode (immutable npm — needs a bump). **Consequence: every push to main touching `src/targets/scripts/Gemfile` requires a version bump** (`cd ../.. && ./version.sh new patch nota-plugin`), otherwise CI goes red with an `::error::` pointing at the bump command.
+
+### Re-enabling the opencode channel
+
+`PUBLISH_OPENCODE: 'false'` in `generate-dist.yml` holds npm back; the Claude Code
+channel publishes normally meanwhile. **While it is off the two channels diverge
+by design**: npm serves `nota-plugin-for-opencode@0.11.1` (1.0.0 never made it —
+CI failed at `npm publish` with `E404` on the PUT, which npm returns for an
+unauthorized write, i.e. `NPM_TOKEN` is no longer valid for this package).
+
+To turn it back on, in this order:
+
+1. Create the `yeste-studio` org on npm (the scope is free as of 2026-08-05).
+2. Replace `NPM_TOKEN` with a granular token holding read/write on the new
+   package, or move the job to Trusted Publishing (OIDC). The chicken-and-egg
+   noted below — granular tokens 403 on a package that does not exist yet — is
+   back in play, since `@yeste-studio/nota` will be new: publish 1.0.0 by hand
+   the first time, then let CI take over.
+3. Flip `PUBLISH_OPENCODE` to `'true'`.
+4. `npm deprecate nota-plugin-for-opencode "renamed to @yeste-studio/nota"`.
+
+One caveat worth knowing before flipping it: the Claude Code channel publishes
+**before** npm, so a failing `npm publish` leaves Claude Code ahead — exactly the
+failure that produced the current divergence. The `Verify both channels agree`
+step at the end of the workflow turns that into a red build instead of a silent
+drift, but it cannot undo the Claude Code publication. Publishing npm first would
+remove the window entirely, at the cost of a failed Claude Code push leaving npm
+ahead — a deliberate trade, since npm is immutable and the Claude Code channel
+can simply be re-run.
 
 ## Build commands
 
@@ -184,7 +218,7 @@ make clean          # Remove knowledge.db, chunks, dist/, and generated artifact
 - **Rational for all timing values** — `1/4r`, never `0.25` or `1/4` (which is integer 0 in Ruby)
 - **Best practice format** — each `.md` file has: `# Title`, `## Description`, `## Example` (```ruby), `## Anti-pattern` (```ruby). Optional: `## Variant` sections.
 - **Source repos are siblings** — the Makefile assumes all MusaDSL repos are cloned as siblings under `../` (e.g., `../musa-dsl/`, `../musadsl-demo/`)
-- **Version lives in `src/manifest.yml`** — the generator propagates it to `plugin.json`, `package.json`, `VERSION`, `marketplace.json`. `./version.sh new` bumps `VERSION` and (via `POST_VERSION_COMMAND`) `manifest.yml` + `marketplace.json`.
+- **Version lives in `src/manifest.yml`** — the generator propagates it to `plugin.json`, `package.json` and `VERSION`, and the CI carries it from the generated `plugin.json` into the distribution catalog. `./version.sh new` bumps `VERSION` and (via `POST_VERSION_COMMAND`) `manifest.yml`.
 - **knowledge.db is gitignored** — never commit it; it's distributed via GitHub Releases
 - **dist/ is gitignored** — never commit it; CI generates and publishes it
 - **Skills use `{{cmd:X}}` placeholders** — never hardcode `/nota:X` in skill source; the generator resolves per target

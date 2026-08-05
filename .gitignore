@@ -8,7 +8,7 @@ src/mcp_server/knowledge.db.last_check
 src/mcp_server/private.db
 src/data/chunks/
 
-# Generated plugin output (CI-published to claude-release branch + npm)
+# Generated plugin output (CI-published to javier-sy/claude-plugins + npm)
 dist/
 
 # Build artifacts

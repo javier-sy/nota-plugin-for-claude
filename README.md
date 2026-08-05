@@ -22,7 +22,7 @@ Say **"hello musa"** to get a welcome and capabilities overview.
 Inside Claude Code, run:
 
 ```
-/plugin marketplace add javier-sy/nota-plugin
+/plugin marketplace add javier-sy/claude-plugins
 ```
 
 ```
@@ -214,7 +214,7 @@ The CI only rebuilds `knowledge.db` — it never touches `private.db`.
 
 ```
 nota/
-├── .claude-plugin/          # Plugin metadata (plugin.json, marketplace.json)
+├── .claude-plugin/          # Plugin metadata (plugin.json)
 ├── skills/
 │   ├── hello/               # /nota:hello skill — welcome and capabilities overview
 │   ├── explain/             # /nota:explain skill — MusaDSL concept explanations

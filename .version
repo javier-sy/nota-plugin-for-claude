@@ -8,11 +8,14 @@ PUBLISH_PLATFORM="GitHub"
 # musa-dsl sigan donde dice, y que los invariantes se sostengan.
 TEST_COMMAND="make check"
 
-# Propagar versión a manifest.yml y marketplace.json tras cada `version.sh new`.
+# Propagar versión a manifest.yml tras cada `version.sh new`.
 # $current_version y $new_version están en scope en el momento de la evaluación.
+#
+# El catálogo del marketplace ya no vive aquí: está en el repo de distribución
+# (javier-sy/claude-plugins) y lo actualiza el CI a partir del plugin.json
+# generado, así que no hay nada que propagarle desde este lado.
 POST_VERSION_COMMAND='
-    sed -i "" "s/version: \"$current_version\"/version: \"$new_version\"/" src/manifest.yml &&
-    sed -i "" "s/\"version\": \"$current_version\"/\"version\": \"$new_version\"/" .claude-plugin/marketplace.json
+    sed -i "" "s/version: \"$current_version\"/version: \"$new_version\"/" src/manifest.yml
 '
 
 # Instalación local: construye knowledge.db, genera dist/claude-code/ y copia al caché.

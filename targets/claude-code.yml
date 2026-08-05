@@ -1,5 +1,10 @@
 # Claude Code target — emits a Claude Code plugin to dist/claude-code/
-# Distributed via the claude-release orphan branch (CI: peaceiris/actions-gh-pages).
+# Distributed through javier-sy/claude-plugins, the repo that holds the
+# yeste.studio marketplace catalog: the CI copies this output into its nota/
+# directory and updates the catalog entry. The plugin and the catalog have to
+# share a repo and a branch — a catalog entry pointing at another repo makes
+# Claude Code clone it over SSH unconditionally, which fails for anyone without
+# GitHub SSH keys (CLI bug, present through 2.1.222).
 
 # How {{cmd:X}} resolves in skill bodies
 cmd_format: "/nota:{skill}"

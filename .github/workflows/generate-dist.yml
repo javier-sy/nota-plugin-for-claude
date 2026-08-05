@@ -15,11 +15,22 @@ concurrency:
   group: generate-dist
   cancel-in-progress: true
 
+env:
+  # ── Publication switch ────────────────────────────────────────────────────
+  # opencode publishing is OFF until the npm side is ready (the package is being
+  # renamed to @yeste-studio/nota and NPM_TOKEN needs replacing — see CLAUDE.md,
+  # "Re-enabling the opencode channel"). Flip to 'true' to publish both channels.
+  PUBLISH_OPENCODE: 'false'
+  # Distribution repo for the Claude Code channel: holds the yeste.studio
+  # marketplace catalog plus one directory per plugin.
+  DIST_REPO: javier-sy/claude-plugins
+  PLUGIN_DIR: nota
+
 jobs:
   generate:
     runs-on: ubuntu-latest
     permissions:
-      contents: write
+      contents: read
 
     steps:
       - name: Checkout source
@@ -31,39 +42,105 @@ jobs:
           ruby-version: '3.2'
           bundler-cache: true
 
-      - name: Verify version was bumped (prevent silent Claude Code/opencode divergence)
+      - name: Read version
         run: |
           VERSION=$(ruby -ryaml -e 'puts YAML.load_file("src/manifest.yml")["version"]')
+          echo "VERSION=${VERSION}" >> "$GITHUB_ENV"
           echo "src/manifest.yml version: ${VERSION}"
-          echo "Checking if nota-plugin-for-opencode@${VERSION} already exists on npm..."
-          HTTP=$(curl -s -o /dev/null -w "%{http_code}" "https://registry.npmjs.org/nota-plugin-for-opencode/${VERSION}")
+
+      - name: Verify version was bumped (prevent silent Claude Code/opencode divergence)
+        if: env.PUBLISH_OPENCODE == 'true'
+        run: |
+          NPM_NAME=$(ruby -ryaml -e 'puts YAML.load_file("targets/opencode.yml")["npm_name"]')
+          echo "Checking if ${NPM_NAME}@${VERSION} already exists on npm..."
+          HTTP=$(curl -s -o /dev/null -w "%{http_code}" "https://registry.npmjs.org/${NPM_NAME}/${VERSION}")
           if [ "${HTTP}" = "200" ]; then
-            echo "::error::nota-plugin-for-opencode@${VERSION} is already on npm. Without a bump, Claude Code would update (rolling claude-release) but opencode would not (npm rejects republish) — silent divergence. Bump and push again:"
-            echo "::error::  cd MusaDSL && ./version.sh nota-plugin <new-version> && make generate && git add -A && git commit -m \"Release <new-version>\" && git push"
+            echo "::error::${NPM_NAME}@${VERSION} is already on npm. Without a bump, Claude Code would update (the distribution repo is rolling) but opencode would not (npm rejects republish) — silent divergence. Bump and push again:"
+            echo "::error::  cd MusaDSL && ./version.sh new patch nota-plugin && git add -A && git commit -m \"Release <new-version>\" && git push"
             exit 1
           fi
           echo "OK: ${VERSION} not yet on npm — both channels will update together."
 
+      - name: Note that opencode publishing is disabled
+        if: env.PUBLISH_OPENCODE != 'true'
+        run: |
+          echo "::notice::PUBLISH_OPENCODE is off — only the Claude Code channel will be updated. opencode stays on whatever version npm currently serves, so the two channels are knowingly diverging. See CLAUDE.md, 'Re-enabling the opencode channel'."
+
       - name: Generate plugin distributions
         run: bundle exec ruby scripts/generate.rb
 
-      - name: Push dist/claude-code/ to claude-release branch
-        uses: peaceiris/actions-gh-pages@v4
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: dist/claude-code
-          publish_branch: claude-release
-          force_orphan: true
-          full_commit_message: "Generated nota plugin v${{ github.sha }}"
+      - name: Publish the Claude Code distribution
+        env:
+          DIST_REPO_TOKEN: ${{ secrets.DIST_REPO_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          if [ -z "${DIST_REPO_TOKEN}" ]; then
+            echo "::error::DIST_REPO_TOKEN is not set. It needs a fine-grained PAT with contents:write on ${DIST_REPO}."
+            exit 1
+          fi
+
+          git clone "https://x-access-token:${DIST_REPO_TOKEN}@github.com/${DIST_REPO}.git" dist-repo
+          cd dist-repo
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          cd ..
+
+          rm -rf "dist-repo/${PLUGIN_DIR}"
+          mkdir -p "dist-repo/${PLUGIN_DIR}"
+          cp -R dist/claude-code/. "dist-repo/${PLUGIN_DIR}/"
+
+          # knowledge.db is 27 MB and ships through GitHub Releases, auto-downloaded
+          # on first session. The generator includes it when a local build exists;
+          # CI has no local build, but never let one reach the distribution repo.
+          rm -f "dist-repo/${PLUGIN_DIR}/mcp_server/knowledge.db"
+
+          ruby scripts/update-marketplace-entry.rb \
+            "dist-repo/.claude-plugin/marketplace.json" \
+            "dist-repo/${PLUGIN_DIR}/.claude-plugin/plugin.json" \
+            "./${PLUGIN_DIR}"
+
+          cd dist-repo
+          git add -A
+          if git diff --cached --quiet; then
+            echo "Nothing to publish — ${PLUGIN_DIR} is already at ${VERSION}."
+            exit 0
+          fi
+          git commit -m "${PLUGIN_DIR} ${VERSION} (from ${GITHUB_SHA})"
+
+          # Another plugin's CI may be pushing to the same catalog; rebase and retry.
+          for attempt in 1 2 3; do
+            if git push; then
+              echo "Published ${PLUGIN_DIR} ${VERSION} to ${DIST_REPO}."
+              exit 0
+            fi
+            echo "Push rejected (attempt ${attempt}/3) — rebasing onto the catalog's new head."
+            git pull --rebase
+          done
+          echo "::error::Could not push to ${DIST_REPO} after 3 attempts."
+          exit 1
 
       - name: Setup Node for npm publish
+        if: env.PUBLISH_OPENCODE == 'true'
         uses: actions/setup-node@v4
         with:
           node-version: '20'
           registry-url: 'https://registry.npmjs.org'
 
-      - name: Publish nota-plugin-for-opencode to npm
+      - name: Publish the opencode distribution to npm
+        if: env.PUBLISH_OPENCODE == 'true'
         working-directory: dist/opencode
         run: npm publish --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Verify both channels agree
+        if: env.PUBLISH_OPENCODE == 'true'
+        run: |
+          NPM_NAME=$(ruby -ryaml -e 'puts YAML.load_file("targets/opencode.yml")["npm_name"]')
+          HTTP=$(curl -s -o /dev/null -w "%{http_code}" "https://registry.npmjs.org/${NPM_NAME}/${VERSION}")
+          if [ "${HTTP}" != "200" ]; then
+            echo "::error::Claude Code was published at ${VERSION} but ${NPM_NAME}@${VERSION} is not on npm (HTTP ${HTTP}). The channels have diverged — fix npm and re-run this workflow."
+            exit 1
+          fi
+          echo "Both channels are at ${VERSION}."

@@ -1,8 +1,17 @@
 # opencode target — emits an npm package to dist/opencode/
-# Distributed as nota-plugin-for-opencode on npm (CI: npm publish).
+# Distributed on npm (CI: npm publish), currently held back by PUBLISH_OPENCODE
+# in .github/workflows/generate-dist.yml.
 
-# npm package name (opencode distribution; repo is the neutral javier-sy/nota-plugin)
-npm_name: nota-plugin-for-opencode
+# npm package name. Scoped to mirror how the plugin reads on the other channel:
+# `nota@yeste.studio` in Claude Code, `@yeste-studio/nota` on npm — same two
+# names in the same order. npm is a flat global namespace, so the scope is what
+# supplies the context the marketplace supplies on the Claude Code side.
+#
+# The unscoped `nota-plugin-for-opencode` (0.11.1) is the previous name and is
+# still what npm serves. Before re-enabling publication: create the yeste-studio
+# npm org, publish under the new name, then deprecate the old package pointing
+# at this one. See CLAUDE.md, "Re-enabling the opencode channel".
+npm_name: "@yeste-studio/nota"
 
 # How {{cmd:X}} resolves in skill bodies (opencode: model-invoked, no slash)
 cmd_format: "the {skill} skill"
