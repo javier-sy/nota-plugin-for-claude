@@ -250,8 +250,8 @@ class CheckSetupTool < MCP::Tool
       status << ""
 
       # Check Voyage API key: not set vs set-but-invalid vs valid
-      api_key_raw = ENV["VOYAGE_API_KEY"]
-      if api_key_raw.nil? || api_key_raw.empty? || api_key_raw.include?("${")
+      api_key_raw = NotaKnowledgeBase::Config.env("VOYAGE_API_KEY")
+      if api_key_raw.nil? || api_key_raw.empty?
         status << "- **Voyage API key**: NOT CONFIGURED — no VOYAGE_API_KEY environment variable found. " \
                   "You need to obtain a key from https://dash.voyageai.com/ and add it to your shell profile."
       else
@@ -264,6 +264,18 @@ class CheckSetupTool < MCP::Tool
           status << "- **Voyage API key**: SET BUT NOT WORKING — the key is configured but the API " \
                     "rejected it. It may be expired, revoked, or mistyped. Error: #{e.message}"
         end
+      end
+
+      # Check the loadable extension. It comes before the index in the report
+      # because without it the index cannot be opened at all.
+      if NotaKnowledgeBase::VecExtension.target.nil?
+        status << "- **sqlite-vec extension**: NOT AVAILABLE for #{NotaKnowledgeBase::VecExtension.platform_name} — " \
+                  "upstream publishes no build for this platform."
+      elsif NotaKnowledgeBase::VecExtension.available?
+        status << "- **sqlite-vec extension**: `#{NotaKnowledgeBase::VecExtension.path}`"
+      else
+        status << "- **sqlite-vec extension**: NOT DOWNLOADED YET — it is fetched on first use " \
+                  "from #{NotaKnowledgeBase::VecExtension.asset_url}"
       end
 
       # Check knowledge DB
@@ -284,6 +296,10 @@ class CheckSetupTool < MCP::Tool
       end
 
       # Check private DB
+      # Named, not just tested: when the harness could not tell us where the
+      # user's home is, this is the line that shows what we resolved instead.
+      status << "- **User directory**: `#{NotaKnowledgeBase::Config.user_dir}`"
+
       private_db_path = NotaKnowledgeBase::DB.default_private_db_path
       has_private_db = File.exist?(private_db_path)
       private_label = has_private_db ? 'present' : "not present — use #{NotaKnowledgeBase::Config.cmd_ref('index')} to manage your private works"

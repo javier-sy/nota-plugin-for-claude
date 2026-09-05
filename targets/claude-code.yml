@@ -13,13 +13,32 @@ cmd_format: "/nota:{skill}"
 frontmatter_keep: [name, description, version]
 
 # MCP server env vars (Claude Code ${VAR} syntax)
+#
+# Only what the harness knows and the server cannot: where the plugin was
+# installed, and the user's key. Nothing here computes a home directory.
+# Claude Code expands ${VAR} against its own environment, and when the variable
+# is not set it passes the literal "${VAR}" through — so "${HOME}/.config/nota"
+# becomes a directory named "${HOME}" on Windows, where the home is USERPROFILE
+# and HOME usually does not exist. Ruby already resolves the home directory on
+# every platform (Config.user_dir), so PRIVATE_DB_PATH and NOTA_USER_DIR are
+# left unset and the server falls back to ~/.config/nota by itself.
 mcp_env:
-  VOYAGE_API_KEY: "${VOYAGE_API_KEY}"
+  # ":-" and no default, deliberately. A ${VAR} with no value and no default
+  # invalidates the whole server, and a user who has not set the key yet is the
+  # normal state of a fresh install — /nota:setup exists to walk them through
+  # it. Without the empty default the server dies before check_setup can say
+  # what is missing, and the skill written to fix the problem cannot run.
+  VOYAGE_API_KEY: "${VOYAGE_API_KEY:-}"
   KNOWLEDGE_DB_PATH: "${CLAUDE_PLUGIN_ROOT}/mcp_server/knowledge.db"
-  PRIVATE_DB_PATH: "${HOME}/.config/nota/private.db"
   BUNDLE_GEMFILE: "${CLAUDE_PLUGIN_ROOT}/Gemfile"
+  # The Gemfile carries rspec for the plugin's own examples, and `bundler/setup`
+  # demands every group in the lockfile whether or not anything requires it — so
+  # without this a user who installed only what the server runs on gets
+  # `Could not find rspec-3.13.2 ... (Bundler::GemNotFound)` and no server. Six
+  # gems exist here for a suite that is never shipped; they are not the user's
+  # to install.
+  BUNDLE_WITHOUT: "development"
   NOTA_CMD_PREFIX: "/nota:"
-  NOTA_USER_DIR: "${HOME}/.config/nota"
   NOTA_GITHUB_REPO: "javier-sy/nota-plugin"
 
 # Path prefix for MCP server paths (Claude Code variable)

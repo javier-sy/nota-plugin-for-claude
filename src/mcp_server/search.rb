@@ -7,6 +7,7 @@
 
 require_relative "config"
 require_relative "db"
+require_relative "vec_extension"
 
 module NotaKnowledgeBase
   module Search
@@ -41,12 +42,20 @@ module NotaKnowledgeBase
     end
 
     def api_key_configured?
-      key = ENV["VOYAGE_API_KEY"].to_s
-      !key.empty? && !key.include?("${")
+      !Config.env("VOYAGE_API_KEY").to_s.empty?
     end
 
     # Check preconditions for search. Returns an error message string, or nil if ready.
     def check_preconditions
+      # Before the index, the thing that reads it. Without the loadable there is
+      # no vector search at all, and that must arrive as an answer rather than as
+      # a stack trace from inside whichever tool asked first.
+      begin
+        VecExtension.ensure!
+      rescue VecExtension::Unavailable => e
+        return "[#{e.message}]"
+      end
+
       return "[Knowledge base not found. #{SETUP_HINT}]" unless db_available?
       unless api_key_configured?
         return "[Voyage API key not configured — no VOYAGE_API_KEY environment variable found. #{SETUP_HINT}]"

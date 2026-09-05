@@ -121,7 +121,10 @@ def generate_claude_code(manifest, target_config, target_dir)
       "mcpServers" => {
         "knowledge-base" => {
           "command" => "ruby",
-          "args" => ["-r", "bundler/setup", "#{prefix}mcp_server/server.rb"],
+          # boot.rb, not `-r bundler/setup server.rb`: Bundler must not be the
+          # first thing to run, or a machine without the gems loses the server
+          # before the code that installs them is reached. See mcp_server/boot.rb.
+          "args" => ["#{prefix}mcp_server/boot.rb"],
           "env" => mcp_env,
           "cwd" => prefix.sub(%r{/$}, "")
         }
@@ -142,7 +145,15 @@ def generate_claude_code(manifest, target_config, target_dir)
           "SessionStart" => [
             {
               "hooks" => [
-                { "type" => "command", "command" => "ruby #{prefix}#{hook_script}", "timeout" => 30 }
+                # The path is quoted because a hook command is a shell line, and
+                # the plugin root can hold spaces (a Windows user name) and
+                # backslashes (every Windows path). Unquoted, C:\Users\Ana Ruiz\...
+                # is neither one argument nor the path it spells.
+                # 120s, not 30: on a first run this hook installs the server's
+                # gems (five seconds on a good connection, and it is the slow
+                # connections that need the room). Every later session pays
+                # `bundle check`, which is local.
+                { "type" => "command", "command" => %(ruby "#{prefix}#{hook_script}"), "timeout" => 120 }
               ]
             }
           ]

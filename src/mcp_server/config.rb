@@ -5,7 +5,8 @@
 # These three values are the ONLY harness-specific surface in the MCP server.
 # They are driven by environment variables, set by each harness's generated config:
 #
-#   NOTA_USER_DIR    — where user data lives (frameworks, best-practices/, private.db)
+#   NOTA_USER_DIR    — where user data lives (frameworks, best-practices/, private.db).
+#                      OVERRIDE ONLY: unset means ~/.config/nota, resolved by Ruby.
 #   NOTA_CMD_PREFIX  — how to reference skills in user-facing strings.
 #                      Non-empty (e.g. "/nota:") → "#{prefix}#{skill}" (Claude Code slash).
 #                      Empty → "the #{skill} skill" (opencode, model-invoked, no slash).
@@ -18,12 +19,38 @@ module NotaKnowledgeBase
   module Config
     module_function
 
-    def user_dir
-      ENV["NOTA_USER_DIR"] || File.join(Dir.home, ".config", "nota")
+    # Read a variable the harness was supposed to set, and refuse a placeholder.
+    #
+    # A harness writes these values into a config file before it knows the
+    # machine it will run on. Claude Code, when the config says "${HOME}" and
+    # HOME is not defined — the normal case on Windows, where the home directory
+    # is USERPROFILE — loads the server anyway and passes the literal text
+    # "${HOME}" through. That is not a value, it is the absence of one, and a
+    # path built from it names a directory called "${HOME}".
+    #
+    # So: an unexpanded placeholder reads as unset, and the caller falls back to
+    # what it would have used had the harness said nothing at all.
+    def env(name)
+      value = ENV[name]
+      return nil if value.nil? || value.include?("${")
+
+      value
     end
 
+    # Where the user's own material lives. Ruby resolves the home directory on
+    # every platform it runs on (HOME, then HOMEDRIVE+HOMEPATH, then USERPROFILE
+    # on Windows), which is why no harness needs to compute this path for us.
+    def user_dir
+      dir = env("NOTA_USER_DIR")
+      return dir if dir && !dir.empty?
+
+      File.join(Dir.home, ".config", "nota")
+    end
+
+    # An empty prefix is a value, not an absence: it is how opencode says that
+    # skills are model-invoked and have no slash.
     def cmd_prefix
-      ENV["NOTA_CMD_PREFIX"] || "/nota:"
+      env("NOTA_CMD_PREFIX") || "/nota:"
     end
 
     # Reference a skill in a user-facing string, adapting to the harness convention.
@@ -35,7 +62,10 @@ module NotaKnowledgeBase
     end
 
     def github_repo
-      ENV["NOTA_GITHUB_REPO"] || "javier-sy/nota-plugin"
+      repo = env("NOTA_GITHUB_REPO")
+      return repo if repo && !repo.empty?
+
+      "javier-sy/nota-plugin"
     end
   end
 end

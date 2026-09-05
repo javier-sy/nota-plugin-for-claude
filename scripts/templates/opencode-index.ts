@@ -22,16 +22,24 @@ export default (async () => {
       cfg.mcp = cfg.mcp ?? {}
       cfg.mcp["knowledge-base"] = {
         type: "local" as const,
-        command: ["ruby", "-r", "bundler/setup", `${HERE}/mcp_server/server.rb`],
+        // boot.rb installs the server's gems if they are missing and only then
+        // loads Bundler — opencode has no session hook, so this is the only
+        // place that can. See mcp_server/boot.rb.
+        command: ["ruby", `${HERE}/mcp_server/boot.rb`],
         cwd: HERE,
         environment: {
           VOYAGE_API_KEY: process.env.VOYAGE_API_KEY ?? "",
           KNOWLEDGE_DB_PATH: `${HERE}/mcp_server/knowledge.db`,
-          PRIVATE_DB_PATH: `${process.env.HOME}/.config/nota/private.db`,
           BUNDLE_GEMFILE: `${HERE}/Gemfile`,
+          // bundler/setup demands every group in the lockfile, including the
+          // rspec tree that exists only for the plugin's own examples.
+          BUNDLE_WITHOUT: "development",
           // opencode: skills are model-invoked (no slash) → "the X skill" in server strings
           NOTA_CMD_PREFIX: "",
-          NOTA_USER_DIR: `${process.env.HOME}/.config/nota`,
+          // No NOTA_USER_DIR / PRIVATE_DB_PATH here: the home directory is not
+          // ours to compute. Node reports none on Windows, and interpolating a
+          // missing one names a folder "undefined". Ruby resolves it on every
+          // platform it runs on — see Config.user_dir.
           NOTA_GITHUB_REPO: GITHUB_REPO,
         },
         enabled: true,

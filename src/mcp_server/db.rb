@@ -11,10 +11,10 @@
 
 require "set"
 require "sqlite3"
-require "sqlite_vec"
 
 require_relative "config"
 require_relative "embeddings"
+require_relative "vec_extension"
 
 module NotaKnowledgeBase
   module DB
@@ -26,19 +26,17 @@ module NotaKnowledgeBase
     module_function
 
     def default_db_path
-      env_path = ENV["KNOWLEDGE_DB_PATH"]
+      env_path = Config.env("KNOWLEDGE_DB_PATH")
       return env_path if env_path
 
       File.join(__dir__, "knowledge.db")
     end
 
-    STABLE_PRIVATE_DB_DIR = Config.user_dir
-
     def default_private_db_path
-      env_path = ENV["PRIVATE_DB_PATH"]
+      env_path = Config.env("PRIVATE_DB_PATH")
       return env_path if env_path
 
-      File.join(STABLE_PRIVATE_DB_DIR, "private.db")
+      File.join(Config.user_dir, "private.db")
     end
 
     def open(path = nil)
@@ -46,7 +44,7 @@ module NotaKnowledgeBase
       db = SQLite3::Database.new(db_path)
       db.results_as_hash = true
       db.enable_load_extension(true)
-      SqliteVec.load(db)
+      VecExtension.load(db)
       db.enable_load_extension(false)
       db
     end

@@ -17,6 +17,27 @@ Say **"hello musa"** to get a welcome and capabilities overview.
 - Ruby 3.1+
 - A [Voyage AI](https://dash.voyageai.com/) API key
 
+**Proven on macOS only.** Linux and Windows should work — Windows from 1.0.2 on —
+but neither is confirmed. If it breaks on yours,
+[open an issue](https://github.com/javier-sy/nota-plugin/issues).
+
+**The server's gems install themselves**, on the first session, into
+`~/.config/nota/bundle` — seven of them (`mcp`, `sqlite3` and five transitive
+dependencies), about 16 MB, five seconds. Your own Ruby is not touched, and the
+gems survive plugin updates. Nothing to restart: the server installs them in its
+own process before it loads them, so the first session is a few seconds slower
+and then works.
+
+If that fails — no network, a proxy — this is the same thing by hand:
+
+```bash
+bundle install --gemfile ~/.claude/plugins/cache/yeste-studio/nota/<version>/Gemfile --without development
+```
+
+The `sqlite-vec` SQLite extension the knowledge base runs on is not among them:
+it is downloaded on first use (about 200 KB, from the sqlite-vec GitHub release)
+and cached under `~/.config/nota/sqlite-vec/`. `/nota:setup` reports where.
+
 ### Install
 
 Inside Claude Code, run:

@@ -33,10 +33,10 @@ module NotaKnowledgeBase
     module_function
 
     def default_db_path
-      env_path = ENV["KNOWLEDGE_DB_PATH"]
+      env_path = Config.env("KNOWLEDGE_DB_PATH")
       return env_path if env_path
 
-      plugin_root = ENV["CLAUDE_PLUGIN_ROOT"]
+      plugin_root = Config.env("CLAUDE_PLUGIN_ROOT")
       if plugin_root
         File.join(plugin_root, "mcp_server", "knowledge.db")
       else

@@ -1,5 +1,141 @@
 # Changelog
 
+## 1.0.2 — 2026-09-05
+
+**The plugin stopped asking the harness where the user's home directory is.**
+
+Reported from a Windows 11 install, and read from its debug log:
+
+```
+[WARN]  Missing environment variables in plugin MCP config: HOME
+[ERROR] Plugin MCP server error - mcp-config-invalid:
+        MCP server knowledge-base invalid: Missing environment variables: HOME
+```
+
+The server never started, so the plugin arrived with its ten skills and none of
+its twenty-two tools. `HOME` is not defined on Windows — the home directory is
+`USERPROFILE` — and `targets/claude-code.yml` built two of its variables from
+it. Claude Code rejects the whole server config when a `${VAR}` it references
+has no value and no `:-default`. (Its documentation describes a softer
+behaviour — a warning, with the literal `${VAR}` text passed through — which
+would have created a folder named `${HOME}` instead. Both are failures, and the
+config had no business referring to `HOME` in either case.)
+
+### What changed
+
+- `targets/claude-code.yml` and the opencode template no longer compute a home
+  directory. They set only what the server cannot know: where the plugin was
+  installed, and the key. `Config.user_dir` resolves `~/.config/nota` with
+  Ruby's `Dir.home`, which knows `HOME`, `HOMEDRIVE`+`HOMEPATH` and
+  `USERPROFILE`, on whichever platform it is running.
+- `Config.env` reads a variable and returns nothing when the value still holds
+  an unexpanded `${...}` — the harness's documented behaviour, in case a build
+  ever takes it. The knowledge saying so used to live twice, in the two places
+  already bitten by it (the API key check in `search.rb` and in
+  `CheckSetupTool`); now it lives once and covers every variable.
+- `VOYAGE_API_KEY` now carries an empty default (`${VOYAGE_API_KEY:-}`). Same
+  rule, second victim: a fresh install has no key, so the server was being
+  rejected before `check_setup` could say the key was missing — and `/nota:setup`,
+  the skill written to fix exactly that, inspects a server that was never there.
+- The SessionStart hook command quotes its path. A hook is a shell line, and a
+  Windows plugin root holds both spaces and backslashes.
+- `check_setup` reports the resolved user directory. When this fails again, the
+  path actually used is on screen instead of inferred.
+- `spec/invariants_spec.rb` fails if any target's `mcp_env` asks the harness for
+  anything but `CLAUDE_PLUGIN_ROOT` and `VOYAGE_API_KEY`.
+
+### And the knowledge base now opens on Windows
+
+The first fix only got the server *launched*. What it then needed was the
+`sqlite-vec` extension, and that could not be installed on Windows either — for
+a reason that turned out to be a label rather than a limit.
+
+Upstream builds a perfectly good Windows binary: `vec0.dll`, 289 KB,
+`PE32+ executable (DLL) x86-64`, shipped in the release as
+`sqlite-vec-0.1.9-loadable-windows-x86_64.tar.gz` and inside the gem. It is
+published under the platform name **`x86_64-mingw32`**, which no Ruby on Windows
+has ever reported — RubyInstaller says `x64-mingw32` before 3.1 and
+`x64-mingw-ucrt` after. The same defect exists for Linux ARM64 (`arm64-linux`
+published, `aarch64-linux` reported): asg017/sqlite-vec#248, open and unanswered
+since 2025-11-04, with no upstream commits since 2026-05-18.
+
+The consequence is worse than one missing gem: **while `sqlite-vec` was a
+dependency, `bundle lock` could not add `x64-mingw-ucrt` at all**, and
+`bundler/setup` refuses to run on a platform the lockfile does not name. One
+mislabelled gem made the whole bundle unresolvable on Windows.
+
+So the dependency moved from the packaging to the artifact. `sqlite-vec` is out
+of the Gemfile; `mcp_server/vec_extension.rb` fetches the loadable from the same
+GitHub Releases that already serve `knowledge.db`, with the same stdlib-only,
+atomic, gracefully-degrading shape, and loads it by path — which is all the gem
+ever did. It is pinned, because an index is written by one vec0 and read by
+another, and cached at
+`~/.config/nota/sqlite-vec/<release>/<os>-<cpu>/vec0.<ext>`. The SessionStart
+hook fetches it once so the first question is not the one that pays; `search`
+reports its absence as an answer instead of a stack trace; `check_setup` names
+the resolved path.
+
+The lockfile now carries eleven platforms instead of five — `x64-mingw-ucrt`
+among them, and `aarch64-linux` and the musl variants as a side effect of the
+same removal.
+
+Two traps, both now held by `spec/`:
+
+- **The cached file must be named `vec0`.** SQLite derives an extension's entry
+  point from its basename, so a first attempt at `vec0-macos-aarch64.dylib` sent
+  it looking for `sqlite3_vec0macosaarch64_init`. Release and platform belong to
+  the directories.
+- **`sqlite-vec` must not return to the Gemfile.** Nothing in such a diff would
+  show that it takes Windows down with it.
+
+### And the plugin installs its own gems
+
+The third thing standing between a fresh machine and a working server, and the
+one that had no excuse. `/plugin install` copies files; `ruby -r bundler/setup`
+narrows the load path and installs nothing. So the server met
+`Bundler::GemNotFound` and did not start — and since the server is what carries
+`check_setup`, nothing left inside the session could say what was missing. The
+plugin was already fetching a 27 MB index and a loadable extension without
+asking, and leaving seven gems to a line in the README.
+
+**The server installs them itself, before it loads them, so nothing has to be
+restarted.** The MCP command is no longer `ruby -r bundler/setup server.rb` but
+`ruby mcp_server/boot.rb`: Bundler as the first instruction is what killed the
+process before any of our code could run. `boot.rb` uses stdlib alone, installs
+what is missing, and only then requires Bundler and the server. `bundle check`
+first — local, no network, so every session after the first pays almost nothing.
+About five seconds and 16 MB, once, and everything it prints goes to stderr,
+because stdout is the MCP transport from the first byte.
+
+The SessionStart hook only reports, so there is one owner and no race. It is also
+why opencode gets this: it has no session hook at all.
+
+They install to `~/.config/nota/bundle`, not to the reader's GEM_HOME. A plugin
+has no business mutating someone's Ruby for its own sake, a system Ruby would
+need root and fail, and the user directory survives a plugin update while the
+versioned cache does not. That path cannot travel through `.mcp.json` — the
+harness cannot expand `${HOME}`, which is this release's other subject — but it
+does not have to: the hook runs in a real Ruby, writes `.bundle/config` beside
+the Gemfile with an absolute `BUNDLE_PATH`, and the server finds them with the
+`BUNDLE_GEMFILE` it already had. No new variable.
+
+`BUNDLE_WITHOUT: development` joins the server's environment. `bundler/setup`
+demands every group named in the lockfile whether or not anything requires it,
+so without it the reader was being asked for six gems that exist only for this
+plugin's own examples and are never shipped.
+
+When the install cannot happen — no network, a proxy — the server says why on
+stderr and prints the command to run by hand; the README carries the same one.
+One risk is not measured: the harness's own patience for a server that has not
+answered `initialize` yet. Five seconds fits; a very slow connection might not,
+and then that session has no server — which is what happened before any of this
+existed, so it is a strict improvement and not a new way to fail.
+
+**What keeps this out of a checkout is a coincidence of layout**, so it is
+written down and asserted: an installed plugin has `Gemfile` and `mcp_server/`
+as siblings, while the source tree has the Gemfile a level higher — `src/Gemfile`
+does not exist. Moving it would let a hook repoint a developer's own bundle.
+
 ## 1.0.0 — 2026-08-05
 
 **Nota stops carrying MusaDSL's knowledge and starts asking the framework for it.**

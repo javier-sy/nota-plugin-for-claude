@@ -18,10 +18,14 @@
 
 require "tmpdir"
 require "fileutils"
+require "yaml"
 
 require_relative "../src/mcp_server/lint"
 require_relative "../src/mcp_server/chunker"
 require_relative "../src/mcp_server/musa_docs"
+require_relative "../src/mcp_server/config"
+require_relative "../src/mcp_server/vec_extension"
+require_relative "../src/mcp_server/ensure_gems"
 
 RSpec.describe "the lint" do
   # It runs when nothing else can, so it must not need anything.
@@ -174,5 +178,154 @@ RSpec.describe "MusaDocs" do
     yield
   ensure
     ENV["NOTA_MUSA_DSL_PATH"] = previous
+  end
+end
+
+RSpec.describe "what the harness is allowed to tell the server" do
+  # WHY. A generated config is written on the machine that builds it and read on
+  # the machine that runs it, and HOME has no value on any Windows install,
+  # where the home directory is USERPROFILE. A "${HOME}/.config/nota" written
+  # here reached a Windows user as
+  #
+  #   mcp-config-invalid: Missing environment variables: HOME
+  #
+  # — the whole server rejected, the plugin arriving with its skills and none of
+  # its tools. The documented behaviour is softer (a warning, the literal text
+  # passed through) and would have built a folder called "${HOME}" instead.
+  #
+  # Nothing here checks that the fallback is nice. It checks that the config does
+  # not ask the harness for something the server can work out for itself.
+
+  # The only two the server cannot know: where it was installed, and the user's key.
+  ADMISSIBLE = %w[CLAUDE_PLUGIN_ROOT VOYAGE_API_KEY].freeze
+
+  Dir[File.join(__dir__, "..", "targets", "*.yml")].each do |target_file|
+    it "asks #{File.basename(target_file, '.yml')} for nothing but the install root and the key" do
+      env = YAML.load_file(target_file)["mcp_env"] || {}
+      referenced = env.values.flat_map { |v| v.to_s.scan(/\$\{(\w+)/) }.flatten.uniq
+
+      expect(referenced - ADMISSIBLE).to be_empty
+    end
+  end
+
+  # A fresh install has no key yet, and /nota:setup is the skill that fixes that.
+  # It cannot run if the server the skill inspects was rejected for the very
+  # variable it was written to ask about.
+  it "gives the key a default, so a keyless install still gets a server" do
+    env = YAML.load_file(File.join(__dir__, "..", "targets", "claude-code.yml"))["mcp_env"]
+
+    expect(env["VOYAGE_API_KEY"]).to eq("${VOYAGE_API_KEY:-}")
+  end
+
+  it "does not build a home directory in the opencode template either" do
+    template = File.read(File.join(__dir__, "..", "scripts", "templates", "opencode-index.ts"))
+
+    expect(template).not_to match(/process\.env\.HOME/)
+  end
+
+  # A hook command is a shell line, and the plugin root holds spaces and
+  # backslashes on Windows. Unquoted it is not the path it spells.
+  it "quotes the path in the hook command it generates" do
+    generator = File.read(File.join(__dir__, "..", "scripts", "generate.rb"))
+
+    expect(generator).to include(%(%(ruby "\#{prefix}\#{hook_script}")))
+  end
+end
+
+RSpec.describe "Config" do
+  # An unexpanded placeholder is the absence of a value, not a value.
+  it "reads a placeholder the harness could not expand as nothing at all" do
+    with_env("NOTA_USER_DIR" => "${HOME}/.config/nota") do
+      expect(NotaKnowledgeBase::Config.user_dir).to eq(File.join(Dir.home, ".config", "nota"))
+    end
+  end
+
+  it "still lets a harness override where the user's material lives" do
+    with_env("NOTA_USER_DIR" => "/somewhere/else") do
+      expect(NotaKnowledgeBase::Config.user_dir).to eq("/somewhere/else")
+    end
+  end
+
+  # Empty is opencode saying "skills have no slash here". It is not an absence.
+  it "keeps an empty command prefix, which means something" do
+    with_env("NOTA_CMD_PREFIX" => "") do
+      expect(NotaKnowledgeBase::Config.cmd_ref("setup")).to eq("the setup skill")
+    end
+  end
+
+  def with_env(values)
+    previous = values.keys.to_h { |k| [k, ENV.fetch(k, nil)] }
+    values.each { |k, v| ENV[k] = v }
+    yield
+  ensure
+    previous.each { |k, v| ENV[k] = v }
+  end
+end
+
+RSpec.describe "the sqlite-vec loadable" do
+  # WHY. The knowledge base cannot be opened without it, and two ways of getting
+  # it wrong are invisible until something fails far from the cause.
+
+  # This one was committed and caught by hand in the same hour: the cache path
+  # started as vec0-macos-aarch64.dylib, and SQLite — which reads the entry
+  # point out of the basename — went looking for sqlite3_vec0macosaarch64_init
+  # and did not find it. Release and platform belong to the directories.
+  it "caches the extension under a file named vec0, whatever the platform" do
+    path = NotaKnowledgeBase::VecExtension.path
+    skip "no upstream build for this platform" if path.nil?
+
+    expect(File.basename(path)).to match(/\Avec0\.(dylib|so|dll)\z/)
+    expect(File.dirname(path)).to include(NotaKnowledgeBase::VecExtension::RELEASE)
+  end
+
+  # The gem publishes a Windows binary under a platform name no Ruby on Windows
+  # reports (asg017/sqlite-vec#248 is the same defect for Linux ARM64). While it
+  # is a dependency the lockfile cannot carry x64-mingw-ucrt, and bundler/setup
+  # refuses on a platform the lock does not name — so the server never starts.
+  # Nothing about that is visible in the diff that adds the gem back.
+  it "is not a bundled gem, so the lockfile can carry Windows" do
+    gemfile = File.read(File.join(__dir__, "..", "Gemfile"))
+    lock = File.read(File.join(__dir__, "..", "Gemfile.lock"))
+
+    expect(gemfile).not_to match(/^\s*gem ["']sqlite-vec["']/)
+    expect(lock).to include("x64-mingw-ucrt")
+  end
+end
+
+RSpec.describe "installing the server's gems" do
+  # WHY. The hook writes a `.bundle/config` and runs `bundle install`, which is
+  # the right thing to do inside an installed plugin and the wrong thing to do
+  # inside a checkout: it would repoint a developer's own bundle at the user
+  # directory, from a hook they did not run on purpose.
+  #
+  # What keeps them apart is a coincidence of layout worth stating out loud: the
+  # installed plugin has Gemfile and mcp_server/ as siblings, and the source tree
+  # has the Gemfile a level higher, so `src/Gemfile` does not exist. Anything
+  # that moves the Gemfile or changes how the root is found silently turns the
+  # guard off.
+  it "does nothing when it is running from the source tree" do
+    expect(NotaKnowledgeBase::EnsureGems.plugin_root).to eq(File.expand_path("../src", __dir__))
+    expect(NotaKnowledgeBase::EnsureGems).not_to be_installed
+  end
+
+  # The reader is never asked for the six gems that exist for this suite.
+  it "keeps the development group out of what it installs" do
+    target = File.join(__dir__, "..", "targets", "claude-code.yml")
+
+    expect(YAML.load_file(target)["mcp_env"]["BUNDLE_WITHOUT"]).to eq("development")
+  end
+
+  # The whole point of boot.rb: Bundler must not be the first thing to run, or
+  # the process dies on a machine without the gems and never reaches the code
+  # that installs them. Putting "-r bundler/setup" back in the command undoes it,
+  # and nothing about that diff would say so.
+  it "starts the server through boot.rb and not through bundler" do
+    generator = File.read(File.join(__dir__, "..", "scripts", "generate.rb"))
+    template = File.read(File.join(__dir__, "..", "scripts", "templates", "opencode-index.ts"))
+
+    expect(generator).to include("mcp_server/boot.rb")
+    expect(generator).not_to include(%("-r", "bundler/setup"))
+    expect(template).to include("mcp_server/boot.rb")
+    expect(template).not_to include(%("-r", "bundler/setup"))
   end
 end
