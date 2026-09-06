@@ -8,7 +8,7 @@
 # the server with `Bundler::GemNotFound` and no server — and because the server
 # is what carries `check_setup`, nothing left inside the session could say what
 # was missing. It was inconsistent as well as unhelpful: the plugin already
-# fetches a 27 MB index and a loadable extension without asking, and left seven
+# fetches a 9 MB index and a loadable extension without asking, and left seven
 # gems to a line in the README.
 #
 # WHY IN THE SERVER AND NOT IN THE HOOK. The hook can install too — it needs no
@@ -39,10 +39,43 @@ require "fileutils"
 require "rbconfig"
 
 require_relative "config"
+require_relative "vec_extension"
 
 module NotaKnowledgeBase
   module EnsureGems
     module_function
+
+    # Whether this machine can run the knowledge base at all, and if not, a
+    # sentence that names the way out.
+    #
+    # Windows on ARM is the case that produced this: Ruby there reports
+    # `aarch64-mingw-ucrt`, and NEITHER of the two things the server rests on
+    # exists for it. `sqlite3` publishes no binary (only `x64-mingw-ucrt` among
+    # Windows platforms) and cannot be built from source either — SQLite's own
+    # `config.sub` rejects the `aarch64-w64-windows-gnu` triplet. `sqlite-vec`
+    # publishes one Windows loadable and it is x86_64. Neither is ours to fix,
+    # and no lockfile entry conjures a gem that was never published.
+    #
+    # Without this check the reader gets thirty seconds of nothing and then
+    # `CONNECT_TIMEOUT`, which names the symptom and hides every cause. Checked
+    # in two places on purpose: boot.rb so the server stops instead of spending
+    # the connection window failing, and the SessionStart hook because the hook's
+    # output is the only one a reader actually sees.
+    def unsupported_reason
+      return nil unless VecExtension.target.nil?
+
+      platform = VecExtension.platform_name
+
+      if platform.include?("mingw") || platform.include?("mswin")
+        "[Nota] The knowledge base cannot run on #{platform}: neither sqlite3 nor sqlite-vec " \
+        "publishes a build for Windows on ARM, and sqlite3 cannot be compiled there. " \
+        "Install a Ruby built for x64 — Windows runs it under emulation — and set NOTA_RUBY to " \
+        "its ruby.exe, so the rest of your Ruby work keeps the interpreter you already have."
+      else
+        "[Nota] The knowledge base cannot run on #{platform}: sqlite-vec publishes no loadable " \
+        "extension for it."
+      end
+    end
 
     # The installed plugin's root: the directory holding the Gemfile, one above
     # mcp_server/. In the source tree that resolves to `src/`, which has no
@@ -113,6 +146,12 @@ module NotaKnowledgeBase
     # process is the one that needs the gems; a process that can install them
     # before it loads them does not have to die first.
     def provide!
+      reason = unsupported_reason
+      if reason
+        warn reason
+        return false
+      end
+
       return true unless installed?
       return false unless write_bundle_config
       return true if satisfied?
@@ -126,7 +165,8 @@ module NotaKnowledgeBase
         warn "[Nota] Dependencies installed."
         true
       else
-        warn "[Nota] Could not install the MCP server's dependencies: #{first_line(err)}"
+        warn "[Nota] Could not install the MCP server's dependencies:"
+        last_lines(err).each { |line| warn "  #{line}" }
         warn "[Nota] Install them by hand: bundle install --gemfile #{gemfile} --without development"
         false
       end
@@ -140,6 +180,9 @@ module NotaKnowledgeBase
     # so that a first session that takes a few seconds is explained rather than
     # merely slow.
     def report
+      reason = unsupported_reason
+      return reason if reason
+
       return nil unless installed?
       return nil if satisfied?
 
@@ -149,9 +192,17 @@ module NotaKnowledgeBase
       nil
     end
 
-    def first_line(text)
-      line = text.to_s.strip.split("\n").first
-      line.nil? || line.empty? ? "no reason given" : line
+    # The last lines, not the first. Bundler's verdict — "An error occurred while
+    # installing sqlite3 (2.9.6), and Bundler cannot continue." — is at the end,
+    # and the beginning is whatever the toolchain happened to complain about
+    # first. Taking `stderr[0]` once reported a pacman permissions warning as the
+    # cause of a platform that cannot compile SQLite at all.
+    #
+    # Lines rather than a search for known phrases: those are Bundler's wording
+    # today, in whatever locale the machine happens to speak.
+    def last_lines(text, count = 6)
+      lines = text.to_s.split("\n").map(&:strip).reject(&:empty?)
+      lines.empty? ? ["no reason given"] : lines.last(count)
     end
   end
 end

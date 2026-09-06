@@ -650,18 +650,16 @@ end
 
 module NotaKnowledgeBase
   def self.run_server
-    # Ensure knowledge.db exists before accepting tool calls.
-    # Covers: first install, plugin update (new cache dir), hook failure.
-    require_relative "ensure_db"
-    db_path = DB.default_db_path
-    unless File.exist?(db_path)
-      $stderr.puts "[musadsl-kb] knowledge.db not found, downloading..."
-      begin
-        EnsureDB.run(db_path, force: true)
-      rescue => e
-        $stderr.puts "[musadsl-kb] download failed: #{e.message}"
-      end
-    end
+    # knowledge.db is NOT downloaded here. It is 9 MB compressed, 27 MB on disk,
+    # and this runs inside the harness's window for answering `initialize` —
+    # thirty seconds, shared with installing the server's gems. A first session
+    # on a slow connection spent it here and was reported as CONNECT_TIMEOUT,
+    # which names nothing.
+    #
+    # It arrives by the two paths that have room for it: the SessionStart hook,
+    # which has its own budget and runs in the background, and `Search.db_available?`,
+    # which fetches it on the first question if the hook has not finished. A tool
+    # call can wait; a handshake cannot.
 
     server = MCP::Server.new(
       name: "musadsl-kb",

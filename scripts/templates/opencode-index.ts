@@ -25,7 +25,9 @@ export default (async () => {
         // boot.rb installs the server's gems if they are missing and only then
         // loads Bundler — opencode has no session hook, so this is the only
         // place that can. See mcp_server/boot.rb.
-        command: ["ruby", `${HERE}/mcp_server/boot.rb`],
+        // NOTA_RUBY, when set, chooses the interpreter — Windows on ARM needs a
+        // Ruby built for x64, and it should not have to be first on PATH.
+        command: [process.env.NOTA_RUBY ?? "ruby", `${HERE}/mcp_server/boot.rb`],
         cwd: HERE,
         environment: {
           VOYAGE_API_KEY: process.env.VOYAGE_API_KEY ?? "",

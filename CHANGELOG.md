@@ -1,5 +1,81 @@
 # Changelog
 
+## 1.0.3 — 2026-09-05
+
+**Windows on ARM still does not work. It now says so in one line instead of
+thirty seconds of silence.**
+
+Reported from a Windows 11 ARM64 machine running 1.0.2: the plugin came up with
+`CONNECT_TIMEOUT` after 30s, and with the server down `check_setup` could not run
+either, so every skill that reaches the knowledge base was dead with no
+diagnosis anywhere a reader would look.
+
+Two things are missing on that platform, and neither is ours to fix:
+
+- **`sqlite3` publishes no `aarch64-mingw-ucrt` binary** — `x64-mingw-ucrt` is its
+  only Windows platform — **and cannot be compiled there**: SQLite's own
+  `config.sub` rejects the `aarch64-w64-windows-gnu` triplet.
+- **`sqlite-vec`'s only Windows loadable is x86_64.**
+
+Adding the platform to `Gemfile.lock` would change nothing. There is no gem to
+resolve. (This is a different defect from asg017/sqlite-vec#248, cited elsewhere
+in this codebase: that one is about a gem being *mislabelled*, this one about a
+build that does not exist.)
+
+### What changed
+
+- **The platform is checked before anything is attempted.**
+  `EnsureGems.unsupported_reason` answers for two callers: `boot.rb`, so the
+  server stops immediately instead of spending the harness's connection window
+  failing to compile SQLite, and the SessionStart hook, because the hook's output
+  is the only one a reader actually sees. The message names the way out rather
+  than only the fact.
+- **`NOTA_RUBY` chooses the interpreter.** The way out is a Ruby built for x64,
+  which Windows runs under emulation — but telling someone to put it first on
+  PATH hijacks every other thing they do with Ruby on that machine. The command
+  is now `${NOTA_RUBY:-ruby}` in `.mcp.json`, in `hooks.json` (quoted, like the
+  script path) and in the opencode template.
+- **knowledge.db no longer downloads inside the connection handshake.** 30s is
+  what the harness allows for `initialize`, and `boot.rb` already spends some of
+  it installing gems; `run_server` was adding 9 MB compressed on top. It arrives
+  through the hook, which has its own budget, and through `Search.db_available?`
+  on the first question. A tool call can wait; a handshake cannot.
+- **A failed `bundle install` reports its last lines, not its first.** Bundler
+  puts its verdict at the end, and `stderr[0]` had reported a pacman permissions
+  warning — in Spanish — as the cause of a platform that cannot compile SQLite
+  at all. Lines rather than a search for known phrases, which are wording and
+  locale.
+- `/nota:setup` gives PowerShell as well as zsh and bash, and knows what to say
+  when the platform is the problem. The index is described as 9 MB compressed and
+  27 MB on disk everywhere, instead of "~20MB" in one place and "27 MB" in
+  another.
+
+### What this release does not do
+
+It does not make Windows ARM work. That needs `sqlite3-ruby` to ship the platform
+**and** sqlite-vec to ship a Windows ARM loadable, and the two are in very
+different states.
+
+`sqlite3-ruby` has an open pull request for it — sparklemotion/sqlite3-ruby#650,
+since 2025-10-29 — cross-compiled with `rake-compiler-dock` ≥ 1.10.0, installed
+on a `windows-11-arm` runner, and green in the author's fork since November. The
+maintainer has held it back while Windows CI was failing; last activity was April
+2026. So the work exists and is stalled, which is not the same as absent. Nokogiri
+has the same pull request open and has not shipped it either: nobody in the
+ecosystem has crossed that line yet, and RubyInstaller offers Windows-on-ARM for
+Ruby 3.4 alone.
+
+sqlite-vec is a plain absence: no build, no attempt, and Windows ARM is not in its
+release workflow. It is also the cheaper of the two to solve without upstream —
+the extension is one C file and upstream publishes the amalgamation — but a
+binary nobody can run is how a broken artifact ships, and GitHub's Windows ARM
+runners are documented as private-repository and paid.
+
+Whether an x64 Ruby under emulation works there is unmeasured, and it is the
+question worth answering first: it costs one session, it exercises both the
+emulation and the msvcrt/UCRT question at once, and if it works none of the above
+needs doing.
+
 ## 1.0.2 — 2026-09-05
 
 **The plugin stopped asking the harness where the user's home directory is.**

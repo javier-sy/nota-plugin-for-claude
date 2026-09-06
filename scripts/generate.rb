@@ -120,7 +120,13 @@ def generate_claude_code(manifest, target_config, target_dir)
     mcp_json = {
       "mcpServers" => {
         "knowledge-base" => {
-          "command" => "ruby",
+          # The interpreter is a knob, not a constant. Windows on ARM needs a
+          # Ruby built for x64 (nothing the server rests on is published for
+          # aarch64-mingw-ucrt), and telling someone to put that Ruby first on
+          # PATH would hijack every other thing they do with Ruby on that
+          # machine. NOTA_RUBY points this plugin at one interpreter and leaves
+          # the rest alone.
+          "command" => "${NOTA_RUBY:-ruby}",
           # boot.rb, not `-r bundler/setup server.rb`: Bundler must not be the
           # first thing to run, or a machine without the gems loses the server
           # before the code that installs them is reached. See mcp_server/boot.rb.
@@ -153,7 +159,9 @@ def generate_claude_code(manifest, target_config, target_dir)
                 # gems (five seconds on a good connection, and it is the slow
                 # connections that need the room). Every later session pays
                 # `bundle check`, which is local.
-                { "type" => "command", "command" => %(ruby "#{prefix}#{hook_script}"), "timeout" => 120 }
+                { "type" => "command",
+                  "command" => %("${NOTA_RUBY:-ruby}" "#{prefix}#{hook_script}"),
+                  "timeout" => 120 }
               ]
             }
           ]

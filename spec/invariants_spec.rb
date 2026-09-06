@@ -197,7 +197,9 @@ RSpec.describe "what the harness is allowed to tell the server" do
   # not ask the harness for something the server can work out for itself.
 
   # The only two the server cannot know: where it was installed, and the user's key.
-  ADMISSIBLE = %w[CLAUDE_PLUGIN_ROOT VOYAGE_API_KEY].freeze
+  # CLAUDE_PLUGIN_ROOT and VOYAGE_API_KEY the server cannot know; NOTA_RUBY is a
+  # choice only the reader can make, and it carries its own default.
+  ADMISSIBLE = %w[CLAUDE_PLUGIN_ROOT VOYAGE_API_KEY NOTA_RUBY].freeze
 
   Dir[File.join(__dir__, "..", "targets", "*.yml")].each do |target_file|
     it "asks #{File.basename(target_file, '.yml')} for nothing but the install root and the key" do
@@ -224,11 +226,13 @@ RSpec.describe "what the harness is allowed to tell the server" do
   end
 
   # A hook command is a shell line, and the plugin root holds spaces and
-  # backslashes on Windows. Unquoted it is not the path it spells.
-  it "quotes the path in the hook command it generates" do
+  # backslashes on Windows. Unquoted it is not the path it spells — and that
+  # applies to the interpreter too, now that it is a variable a reader sets to
+  # something like C:\\Program Files\\Ruby34-x64\\bin\\ruby.exe.
+  it "quotes both the interpreter and the path in the hook command" do
     generator = File.read(File.join(__dir__, "..", "scripts", "generate.rb"))
 
-    expect(generator).to include(%(%(ruby "\#{prefix}\#{hook_script}")))
+    expect(generator).to include(%(%("${NOTA_RUBY:-ruby}" "\#{prefix}\#{hook_script}")))
   end
 end
 
@@ -327,5 +331,43 @@ RSpec.describe "installing the server's gems" do
     expect(generator).not_to include(%("-r", "bundler/setup"))
     expect(template).to include("mcp_server/boot.rb")
     expect(template).not_to include(%("-r", "bundler/setup"))
+  end
+end
+
+RSpec.describe "a platform the server cannot run on" do
+  # WHY. On Windows ARM neither dependency exists: sqlite3 publishes no
+  # aarch64-mingw-ucrt binary and cannot be compiled there (SQLite's config.sub
+  # rejects the triplet), and sqlite-vec's only Windows loadable is x86_64.
+  # Before this was detected, the reader got thirty seconds of nothing and then
+  # CONNECT_TIMEOUT — a symptom with every cause hidden behind it.
+  #
+  # The predicate has to answer for both speakers: boot.rb, so the server stops
+  # instead of spending the connection window, and the hook, whose output is the
+  # only one a reader sees.
+  it "is named, and names the way out, on Windows ARM" do
+    with_host(cpu: "aarch64", os: "mingw-ucrt") do
+      reason = NotaKnowledgeBase::EnsureGems.unsupported_reason
+
+      expect(reason).to include("aarch64-mingw-ucrt")
+      expect(reason).to include("NOTA_RUBY")
+      expect(NotaKnowledgeBase::EnsureGems.provide!).to be(false)
+    end
+  end
+
+  # The same machine with an x64 Ruby is a supported machine, and nothing must
+  # make it look otherwise — that is the whole point of the advice above.
+  it "says nothing about Windows on x64" do
+    with_host(cpu: "x64", os: "mingw-ucrt") do
+      expect(NotaKnowledgeBase::EnsureGems.unsupported_reason).to be_nil
+    end
+  end
+
+  def with_host(cpu:, os:)
+    previous = { "host_cpu" => RbConfig::CONFIG["host_cpu"], "host_os" => RbConfig::CONFIG["host_os"] }
+    RbConfig::CONFIG["host_cpu"] = cpu
+    RbConfig::CONFIG["host_os"] = os
+    yield
+  ensure
+    previous.each { |k, v| RbConfig::CONFIG[k] = v }
   end
 end

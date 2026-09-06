@@ -26,13 +26,16 @@ Explain to the user:
 - Add it to their shell profile:
 
   ```bash
-  # For zsh (default on macOS)
-  echo 'export VOYAGE_API_KEY="your-key-here"' >> ~/.zshrc
-  source ~/.zshrc
+  # zsh (the default on macOS)
+  echo 'export VOYAGE_API_KEY="your-key-here"' >> ~/.zshrc && source ~/.zshrc
 
-  # For bash
-  echo 'export VOYAGE_API_KEY="your-key-here"' >> ~/.bashrc
-  source ~/.bashrc
+  # bash
+  echo 'export VOYAGE_API_KEY="your-key-here"' >> ~/.bashrc && source ~/.bashrc
+  ```
+
+  ```powershell
+  # Windows, PowerShell
+  [Environment]::SetEnvironmentVariable('VOYAGE_API_KEY', 'your-key-here', 'User')
   ```
 
 - After setting the variable, restart Claude Code for the MCP server to pick it up
@@ -43,7 +46,22 @@ Explain that the knowledge base should auto-download on session start. Suggest:
 
 - Restart Claude Code to trigger the auto-download
 - Check internet connectivity
-- The download comes from GitHub Releases and is cached locally (~20MB)
+- The download comes from GitHub Releases (9 MB compressed, 27 MB on disk)
+
+### If the report says the platform is unsupported
+
+Windows on ARM is the case this covers: Ruby there reports `aarch64-mingw-ucrt`,
+and neither `sqlite3` nor `sqlite-vec` publishes a build for it. Tell the user to
+install a Ruby built for **x64** — Windows runs it under emulation — and to point
+`NOTA_RUBY` at its `ruby.exe` rather than putting it first on PATH, so their other
+Ruby work is untouched:
+
+```powershell
+[Environment]::SetEnvironmentVariable('NOTA_RUBY', 'C:\Ruby34-x64\bin\ruby.exe', 'User')
+```
+
+Then reopen the session. Do not suggest editing the lockfile: the gems that would
+be resolved do not exist.
 
 ### If everything is configured
 

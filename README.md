@@ -21,6 +21,15 @@ Say **"hello musa"** to get a welcome and capabilities overview.
 but neither is confirmed. If it breaks on yours,
 [open an issue](https://github.com/javier-sy/nota-plugin/issues).
 
+**On Windows, Ruby must be built for x64.** Neither `sqlite3` nor `sqlite-vec`
+publishes anything for Windows on ARM, so a Ruby reporting `aarch64-mingw-ucrt`
+cannot run the knowledge base — the session says so and stops. Windows runs an
+x64 Ruby under emulation; rather than putting it first on PATH, point Nota at it:
+
+```powershell
+[Environment]::SetEnvironmentVariable('NOTA_RUBY', 'C:\Ruby34-x64\bin\ruby.exe', 'User')
+```
+
 **The server's gems install themselves**, on the first session, into
 `~/.config/nota/bundle` — seven of them (`mcp`, `sqlite3` and five transitive
 dependencies), about 16 MB, five seconds. Your own Ruby is not touched, and the
