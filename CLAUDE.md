@@ -79,6 +79,18 @@ They go to `~/.config/nota/bundle`, not the reader's GEM_HOME: a plugin should n
 
 **`sqlite-vec` is not a bundled gem, and must not become one again.** The gem's Windows binary is sound — a real `vec0.dll` — but it is published under the platform name `x86_64-mingw32`, which no Ruby on Windows reports (`x64-mingw32` before 3.1, `x64-mingw-ucrt` after). The same defect exists for Linux ARM64 (`arm64-linux` published, `aarch64-linux` reported): [asg017/sqlite-vec#248](https://github.com/asg017/sqlite-vec/issues/248), open and unanswered since 2025-11-04, upstream quiet since 2026-05-18. While the gem is a dependency, `bundle lock` cannot add `x64-mingw-ucrt` at all, and `bundler/setup` refuses on a platform the lockfile does not name — the server never starts. So `mcp_server/vec_extension.rb` fetches the loadable from the sqlite-vec GitHub release instead, pinned, cached under `~/.config/nota/sqlite-vec/<release>/<os>-<cpu>/vec0.<ext>`. Two traps, both fixed in `spec/`: the cached file must be named `vec0` (SQLite reads the entry point from the basename, so `vec0-macos-aarch64.dylib` sends it looking for `sqlite3_vec0macosaarch64_init`), and the version is pinned because an index is written by one vec0 and read by another.
 
+**Open question, with numbers: the plugin may not need a vector index at all.** Measured 2026-09-06 on the shipped corpus — 2390 chunks, 1024 dims, normalised (so cosine is a dot product):
+
+| | |
+|---|---|
+| sqlite-vec KNN | 5.5 ms |
+| brute force, pure Ruby, whole corpus | 96 ms |
+| **Voyage round-trip to embed the query** | **200 ms** |
+
+The search is not the cost; the embedding round-trip is, and it is unavoidable. 96 ms is also the worst case, since `search` scans one collection at a time (`api` is the largest at 1341; `docs` is 142). It scales to 407 ms at 10k vectors and 2 s at 50k, so there is a ceiling, and quantising to int8 or binary sits below it.
+
+Dropping **both** `sqlite-vec` and `sqlite3` — storage as a flat file, metadata in JSON and vectors in a packed `float32` blob — would leave `mcp` as the only runtime dependency, which is pure Ruby, and every platform problem this codebase has had would disappear with it. Verify `bigdecimal` first: `mcp` pulls it, it has a C extension and publishes no precompiled gems, though Ruby ships one. What would be lost: SQL for `upsert`/`prune`/`collection_stats` (~200 lines to rewrite), and **SQLite's locking on `private.db`** when several sessions are open, which is the real regression. **Do not do this for Windows ARM** — the argument that stands on its own is that 2390 vectors are an array, not a database.
+
 **Open option: serve the loadable from our own releases.** Today the five tarballs are fetched from upstream's release (`asg017/sqlite-vec`, five platforms, ~200 KB each), which is the honest default — the artifact is theirs and its provenance is checkable. But it makes a runtime dependency on a repository with no commits since 2026-05-18, and nothing stops a release being retagged or deleted. The alternative is to attach the five tarballs to *our* releases and point `VecExtension::REPO` at `Config.github_repo`: about 1 MB added to each release of ours, plus the obligation to re-upload them whenever the pin moves. **Take this option if** upstream deletes or retags v0.1.9, or a download failure is ever reported that is not the user's network. Not before: mirroring a dependency is a maintenance burden bought with a real, if small, loss of provenance.
 
 ## Key files and their roles
