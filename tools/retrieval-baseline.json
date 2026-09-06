@@ -1,5 +1,5 @@
 {
-  "taken": "antes de E1, knowledge.db de musa-dsl v0.49.1",
+  "taken": "corpus movido desde el 2026-08-05: musa-dsl docs +437 lineas (guides/project-structure.md y vocabulary.md nuevos, generative.md editado) y midi-communications-windows indexada",
   "results": [
     {
       "question": "I have a plan of sections, each with a duration, and I want them to sound one after another",
@@ -184,12 +184,12 @@
     {
       "question": "each note should follow plausibly from the one before, with tendencies",
       "kind": "docs",
-      "rank": 2,
+      "rank": 3,
       "got": [
         "https://github.com/javier-sy/musa-dsl/blob/v0.49.1/docs/idioms.md > 8. Musical material as text",
         "https://github.com/javier-sy/musa-dsl/blob/v0.49.1/docs/idioms.md > The root principle",
-        "https://github.com/javier-sy/musa-dsl/blob/v0.49.1/docs/subsystems/generative.md > When is this the answer",
         "https://github.com/javier-sy/musa-dsl/blob/v0.49.1/docs/idioms.md > 3. Pitch",
+        "https://github.com/javier-sy/musa-dsl/blob/v0.49.1/docs/subsystems/generative.md > When is this the answer",
         "https://github.com/javier-sy/musa-dsl/blob/v0.49.1/docs/idioms.md > 4. Layers: musical intent vs. realization"
       ]
     },
@@ -262,7 +262,7 @@
         "https://github.com/javier-sy/musa-dsl/blob/v0.49.1/docs/idioms.md > 15. Clocks",
         "https://github.com/javier-sy/musa-dsl/blob/v0.49.1/docs/subsystems/neumas.md > Sending it somewhere",
         "https://github.com/javier-sy/musa-dsl/blob/v0.49.1/docs/vocabulary.md > matrix",
-        "https://github.com/javier-sy/musa-dsl/blob/v0.49.1/docs/subsystems/sequencer.md > When is this the answer"
+        "https://github.com/javier-sy/musa-dsl/blob/v0.49.1/docs/guides/project-structure.md > Form as a state machine"
       ]
     },
     {
@@ -271,7 +271,7 @@
       "rank": 0,
       "got": [
         "https://github.com/javier-sy/musa-dsl/blob/v0.49.1/docs/subsystems/transport.md > When is this the answer",
-        "https://github.com/javier-sy/musalce-server/blob/v0.8.1/docs/architecture.md > Accessing the DAW (`daw.*`)",
+        "https://github.com/javier-sy/musalce-server/blob/v0.8.2/docs/architecture.md > Accessing the DAW (`daw.*`)",
         "https://github.com/javier-sy/musa-dsl/blob/v0.49.1/docs/guides/project-structure.md > Control arriving from outside",
         "https://github.com/javier-sy/musa-dsl/blob/v0.49.1/docs/guides/project-structure.md > The same piece in real time and offline",
         "https://github.com/javier-sy/musa-dsl/blob/v0.49.1/docs/vocabulary.md > transport"
@@ -309,7 +309,7 @@
         "https://github.com/javier-sy/musa-dsl/blob/v0.49.1/docs/guides/project-structure.md > Stopping",
         "https://github.com/javier-sy/musa-dsl/blob/v0.49.1/docs/vocabulary.md > transport",
         "https://github.com/javier-sy/musa-dsl/blob/v0.49.1/docs/subsystems/transport.md > When is this the answer",
-        "https://github.com/javier-sy/musalce-server/blob/v0.8.1/docs/architecture.md > Stop/Play semantics",
+        "https://github.com/javier-sy/musalce-server/blob/v0.8.2/docs/architecture.md > Stop/Play semantics",
         "https://github.com/javier-sy/musa-dsl/blob/v0.49.1/docs/subsystems/transport.md > The lifecycle, run"
       ]
     },
@@ -320,9 +320,9 @@
       "got": [
         "https://github.com/javier-sy/musa-dsl/blob/v0.49.1/docs/guides/project-structure.md > Control arriving from outside",
         "https://github.com/javier-sy/musa-dsl/blob/v0.49.1/docs/subsystems/neumas.md > Sending it somewhere",
-        "https://github.com/javier-sy/musalce-server/blob/v0.8.1/docs/architecture.md > Accessing the Stream Deck (`on :event` and `surface[:event]`)",
-        "https://github.com/javier-sy/musalce-server/blob/v0.8.1/docs/architecture.md > OSC handler protocol",
-        "https://github.com/javier-sy/musa-dsl/blob/v0.49.1/docs/subsystems/sequencer.md > When is this the answer"
+        "https://github.com/javier-sy/musalce-server/blob/v0.8.2/docs/architecture.md > Accessing the Stream Deck (`on :event` and `surface[:event]`)",
+        "https://github.com/javier-sy/musalce-server/blob/v0.8.2/docs/architecture.md > OSC handler protocol",
+        "https://github.com/javier-sy/musa-dsl/blob/v0.49.1/docs/vocabulary.md > sequencer"
       ]
     },
     {
@@ -333,7 +333,7 @@
         "https://github.com/javier-sy/musa-dsl/blob/v0.49.1/docs/subsystems/repl.md > When is this the answer",
         "https://github.com/javier-sy/musa-dsl/blob/v0.49.1/docs/subsystems/repl.md > Use Cases",
         "https://github.com/javier-sy/musa-dsl/blob/v0.49.1/docs/subsystems/repl.md > (intro)",
-        "https://github.com/javier-sy/musalce-server/blob/v0.8.1/docs/architecture.md > When to use this (vs the standalone REPL)",
+        "https://github.com/javier-sy/musalce-server/blob/v0.8.2/docs/architecture.md > When to use this (vs the standalone REPL)",
         "https://github.com/javier-sy/musa-dsl/blob/v0.49.1/docs/subsystems/repl.md > Communication Protocol"
       ]
     },
@@ -355,10 +355,10 @@
       "rank": 1,
       "got": [
         "https://github.com/javier-sy/musadsl-demo/blob/main/demo-14-clock-modes/musa/main_master.rb > TimerClock requiere inicio explícito",
-        "https://github.com/javier-sy/musadsl-demo/blob/main/demo-03-canon/musa/main.rb > TimerClock requiere inicio explícito",
         "https://github.com/javier-sy/musadsl-demo/blob/main/demo-22-multiphase/musa/main.rb > TimerClock requiere inicio explícito",
         "https://github.com/javier-sy/musadsl-demo/blob/main/demo-21-fibonacci-episodes/musa/main.rb > TimerClock requiere inicio explícito",
-        "https://github.com/javier-sy/musadsl-demo/blob/main/demo-19-advanced-series/musa/main.rb > TimerClock requiere inicio explícito"
+        "https://github.com/javier-sy/musadsl-demo/blob/main/demo-19-advanced-series/musa/main.rb > TimerClock requiere inicio explícito",
+        "https://github.com/javier-sy/musadsl-demo/blob/main/demo-18-parameter-automation/musa/main.rb > TimerClock requiere inicio explícito"
       ]
     },
     {
@@ -366,11 +366,11 @@
       "kind": "best_practice",
       "rank": 0,
       "got": [
-        "https://github.com/javier-sy/nota-plugin/blob/main/src/data/best-practices/tick-aligned-durations.md > Description",
-        "https://github.com/javier-sy/nota-plugin/blob/main/src/data/best-practices/tick-aligned-durations.md > Example",
-        "https://github.com/javier-sy/nota-plugin/blob/main/src/data/best-practices/tick-aligned-durations.md > (intro)",
-        "https://github.com/javier-sy/nota-plugin/blob/main/src/data/best-practices/tick-aligned-durations.md > Anti-pattern",
-        "https://github.com/javier-sy/nota-plugin/blob/main/src/data/best-practices/markov-blending.md > Example"
+        "nota-plugin/src/data/best-practices/tick-aligned-durations.md > Description",
+        "nota-plugin/src/data/best-practices/tick-aligned-durations.md > Example",
+        "nota-plugin/src/data/best-practices/tick-aligned-durations.md > (intro)",
+        "nota-plugin/src/data/best-practices/tick-aligned-durations.md > Anti-pattern",
+        "nota-plugin/src/data/best-practices/markov-blending.md > Example"
       ]
     },
     {
@@ -378,11 +378,11 @@
       "kind": "best_practice",
       "rank": 0,
       "got": [
-        "https://github.com/javier-sy/nota-plugin/blob/main/src/data/best-practices/markov-blending.md > Description",
-        "https://github.com/javier-sy/nota-plugin/blob/main/src/data/best-practices/markov-blending.md > Example",
-        "https://github.com/javier-sy/nota-plugin/blob/main/src/data/best-practices/markov-blending.md > (intro)",
-        "https://github.com/javier-sy/nota-plugin/blob/main/src/data/best-practices/tick-aligned-durations.md > Example",
-        "https://github.com/javier-sy/nota-plugin/blob/main/src/data/best-practices/tick-aligned-durations.md > Description"
+        "nota-plugin/src/data/best-practices/markov-blending.md > Description",
+        "nota-plugin/src/data/best-practices/markov-blending.md > Example",
+        "nota-plugin/src/data/best-practices/markov-blending.md > (intro)",
+        "nota-plugin/src/data/best-practices/tick-aligned-durations.md > Example",
+        "nota-plugin/src/data/best-practices/tick-aligned-durations.md > Description"
       ]
     }
   ]
