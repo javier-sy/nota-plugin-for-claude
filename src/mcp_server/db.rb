@@ -25,11 +25,32 @@ module NotaKnowledgeBase
 
     module_function
 
+    # Where the downloaded index lives.
+    #
+    # Under the user directory, not under the plugin, for the same reason the
+    # server's gems and the sqlite-vec loadable are: a plugin install is
+    # versioned, so `__dir__` is a different directory after every update and
+    # anything left there is gone. For a 9 MB index that meant re-downloading it
+    # on every plugin release, and -- worse -- an update applied mid-session left
+    # the index absent until the next SessionStart hook ran, which
+    # `/reload-plugins` does not trigger. The knowledge base simply vanished.
+    #
+    # The index already knows how to tell whether it is stale: EnsureDB compares
+    # `.version` against the latest release. Keeping it somewhere stable is what
+    # lets that comparison do its job, instead of being answered by "the file is
+    # not there, download it again".
+    #
+    # This path is not passed through the harness environment on purpose. It has
+    # to be built from Dir.home, and `${HOME}` is exactly what a harness cannot
+    # be relied on to expand -- on Windows an unexpanded `${...}` makes Claude
+    # Code reject the whole MCP server. Computing it here, in a real Ruby that
+    # knows its own home directory, is the same choice EnsureGems makes for the
+    # bundle path.
     def default_db_path
       env_path = Config.env("KNOWLEDGE_DB_PATH")
       return env_path if env_path
 
-      File.join(__dir__, "knowledge.db")
+      File.join(Config.user_dir, "knowledge.db")
     end
 
     def default_private_db_path

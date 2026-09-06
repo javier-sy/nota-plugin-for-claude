@@ -29,7 +29,6 @@ mcp_env:
   # it. Without the empty default the server dies before check_setup can say
   # what is missing, and the skill written to fix the problem cannot run.
   VOYAGE_API_KEY: "${VOYAGE_API_KEY:-}"
-  KNOWLEDGE_DB_PATH: "${CLAUDE_PLUGIN_ROOT}/mcp_server/knowledge.db"
   BUNDLE_GEMFILE: "${CLAUDE_PLUGIN_ROOT}/Gemfile"
   # The Gemfile carries rspec for the plugin's own examples, and `bundler/setup`
   # demands every group in the lockfile whether or not anything requires it — so

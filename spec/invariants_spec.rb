@@ -24,6 +24,7 @@ require_relative "../src/mcp_server/lint"
 require_relative "../src/mcp_server/chunker"
 require_relative "../src/mcp_server/musa_docs"
 require_relative "../src/mcp_server/config"
+require_relative "../src/mcp_server/db"
 require_relative "../src/mcp_server/vec_extension"
 require_relative "../src/mcp_server/ensure_gems"
 
@@ -404,5 +405,49 @@ RSpec.describe "a platform the server cannot run on" do
     yield
   ensure
     previous.each { |k, v| RbConfig::CONFIG[k] = v }
+  end
+end
+
+# Everything the plugin downloads has to outlive the plugin, because a plugin
+# install is versioned: after an update the previous directory is a different
+# directory, and whatever was cached in it is gone. Three of the four artifacts
+# already knew that. The index did not, and the symptom was the knowledge base
+# disappearing on update -- with `/reload-plugins` unable to bring it back,
+# since only the SessionStart hook downloads it.
+RSpec.describe "where the downloaded index lives" do
+  it "is under the user directory, not under the plugin" do
+    path = NotaKnowledgeBase::DB.default_db_path
+
+    expect(path).to start_with(NotaKnowledgeBase::Config.user_dir)
+    expect(path).not_to include(File.expand_path("../src/mcp_server", __dir__))
+  end
+
+  # The version marker and the check stamp are derived from the index's own path
+  # by EnsureDB, so moving the index moves them. Were they to part company, the
+  # index would be permanently either stale or re-downloaded.
+  it "keeps its version marker beside it" do
+    path = NotaKnowledgeBase::DB.default_db_path
+
+    expect(File.dirname("#{path}.version")).to eq(File.dirname(path))
+  end
+
+  # The build does pass a path: CI writes the index into the checkout and the
+  # retrieval battery reads it from there. That override has to keep working.
+  it "still obeys an explicit KNOWLEDGE_DB_PATH" do
+    previous = ENV["KNOWLEDGE_DB_PATH"]
+    ENV["KNOWLEDGE_DB_PATH"] = "/tmp/somewhere/knowledge.db"
+
+    expect(NotaKnowledgeBase::DB.default_db_path).to eq("/tmp/somewhere/knowledge.db")
+  ensure
+    ENV["KNOWLEDGE_DB_PATH"] = previous
+  end
+
+  # And the harness must not set it back. It would have to be built from the
+  # home directory, and an unexpanded ${HOME} is what makes Claude Code reject
+  # the whole server on Windows.
+  it "is not handed to the server by the harness" do
+    manifest = YAML.load_file(File.expand_path("../targets/claude-code.yml", __dir__))
+
+    expect(manifest["mcp_env"] || {}).not_to have_key("KNOWLEDGE_DB_PATH")
   end
 end
