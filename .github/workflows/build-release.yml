@@ -4,6 +4,15 @@ on:
   repository_dispatch:
     types: [source-updated]
   workflow_dispatch:
+    inputs:
+      retake_baseline:
+        description: 'Accept current retrieval as the new baseline instead of checking against the old one'
+        type: boolean
+        default: false
+      baseline_reason:
+        description: 'Why the corpus moved. Recorded in the baseline; required when retaking.'
+        type: string
+        default: ''
   push:
     branches: [main]
     paths:
@@ -34,6 +43,7 @@ jobs:
             "midi-parser"
             "midi-communications"
             "midi-communications-macos"
+            "midi-communications-windows"
             "musalce-server"
           )
           for repo in "${repos[@]}"; do
@@ -73,11 +83,44 @@ jobs:
           NOTA_MUSA_DSL_PATH: sources/musa-dsl
         run: bundle exec ruby tools/contract-check.rb
 
+      # The battery refuses to publish an index that answers worse than the one
+      # before it, and it deliberately will not decide whether a drop is a
+      # regression or a corpus that legitimately moved. When it is the second --
+      # documents added, a section renamed -- the baseline is retaken, and that
+      # is an explicit act with a reason attached, not a default.
       - name: Retrieval battery
+        if: ${{ !inputs.retake_baseline }}
         env:
           VOYAGE_API_KEY: ${{ secrets.VOYAGE_API_KEY }}
           KNOWLEDGE_DB_PATH: src/mcp_server/knowledge.db
         run: bundle exec ruby tools/retrieval-battery.rb
+
+      - name: Retrieval battery, taking a new baseline
+        if: ${{ inputs.retake_baseline }}
+        env:
+          VOYAGE_API_KEY: ${{ secrets.VOYAGE_API_KEY }}
+          KNOWLEDGE_DB_PATH: src/mcp_server/knowledge.db
+          REASON: ${{ inputs.baseline_reason }}
+        run: |
+          if [ -z "$REASON" ]; then
+            echo "::error::retake_baseline needs baseline_reason: say what moved in the corpus."
+            exit 1
+          fi
+          bundle exec ruby tools/retrieval-battery.rb --baseline "$REASON"
+
+      # Taken here rather than on a laptop so that the numbers come from the
+      # same machine, Ruby and embedding model that will later be checked
+      # against them. tools/ is in neither workflow's paths filter, so this
+      # commit triggers nothing.
+      - name: Commit the new baseline
+        if: ${{ inputs.retake_baseline }}
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email 'github-actions[bot]@users.noreply.github.com'
+          git add tools/retrieval-baseline.json
+          git diff --staged --quiet && echo "Baseline unchanged." && exit 0
+          git commit -m "Retrieval baseline: ${{ inputs.baseline_reason }}"
+          git push
 
       - name: Package knowledge DB
         run: gzip -c src/mcp_server/knowledge.db > knowledge.db.gz

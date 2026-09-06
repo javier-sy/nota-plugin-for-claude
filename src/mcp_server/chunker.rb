@@ -576,6 +576,7 @@ module NotaKnowledgeBase
         midi-parser
         midi-communications
         midi-communications-macos
+        midi-communications-windows
         musalce-server
       ].each do |gem_name|
         readme = File.join(source_root, gem_name, "README.md")

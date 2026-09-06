@@ -146,6 +146,7 @@ module NotaKnowledgeBase
         "midi-parser"               => "lib/midi-parser/version.rb",
         "midi-communications"       => "lib/midi-communications/version.rb",
         "midi-communications-macos" => "lib/midi-communications-macos/version.rb",
+        "midi-communications-windows" => "lib/midi-communications-windows/version.rb",
         "musalce-server"            => "lib/version.rb",
       }
 
