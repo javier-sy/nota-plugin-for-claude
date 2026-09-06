@@ -1,5 +1,63 @@
 # Changelog
 
+## 1.0.4 — 2026-09-06
+
+**`get_doc` and `list_docs` told people to install a gem they already had. Since
+1.0.2, on every platform.**
+
+Reported from a session that was doing exactly what the `explain` skill tells it
+to do — route with a `docs` snippet, then read the document whole before resting
+an argument on it — and got:
+
+```
+[musa-dsl is not installed. Nota reads the framework's documentation from the
+installed gem, so it needs one: `gem install musa-dsl`...]
+```
+
+in the same turn in which the SessionStart hook had already printed
+`[Nota] MusaDSL 0.49.1, read from the installed gem at …`. Same code, same
+session, opposite answers.
+
+### The cause was this release series' own isolation
+
+1.0.2 gave the server a private bundle so that installing Nota's dependencies
+would never touch the reader's Ruby: `BUNDLE_PATH` in `.bundle/config`. A
+configured `BUNDLE_PATH` makes Bundler point `GEM_HOME` at that bundle and leave
+`GEM_PATH` empty, and `Gem.path` collapses to the single directory musa-dsl is
+guaranteed not to be in. `musa_docs.rb` had a comment saying it looked at the gem
+directories "which Bundler does not narrow" — true when it was written, and made
+false by the change two releases later.
+
+Measured both ways on the reporter's Windows machine and again here on macOS:
+with `BUNDLE_PATH`, 0 gemspecs found; without it, 19. The hook escaped because it
+runs in a plain Ruby with no Bundler at all, which is what made the failure look
+like a platform problem when it never was one.
+
+**The isolation that protects the reader's Ruby is what hid the reader's gem.**
+
+### What changed
+
+- `MusaDocs.gem_roots` is a union, and each part earns its place. `Gem.user_dir`
+  and `Gem.default_path` come from the Ruby installation rather than the
+  environment, so a plain install stays visible through them; `Bundler.original_env`
+  is what answers under rvm, rbenv or any other manager, where the gems live in a
+  `GEM_HOME` the environment set — on this developer's machine it is the only one
+  of the three that finds anything at all, which is why one fallback would not
+  have done.
+- **The message no longer asserts what it cannot know.** "Not installed" was a
+  guess, and a wrong one for everybody who hit this. It now names the directories
+  that were searched, so "not installed" and "installed where I am not looking"
+  can be told apart without a debugging session.
+- `spec/` grows the example that would have caught it: a subprocess with the gem
+  path narrowed the way Bundler narrows it. Verified against the old code, which
+  returns nothing, and the new, which returns the version. No existing example
+  could have found this, because none of them run under a narrowed gem path.
+
+### What was not affected
+
+Semantic search — `search`, `api_reference`, `similar_works` — reads
+`knowledge.db` and never touches the gem.
+
 ## 1.0.3 — 2026-09-05
 
 **Windows on ARM still does not work. It now says so in one line instead of

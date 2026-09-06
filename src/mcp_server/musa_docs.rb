@@ -70,18 +70,57 @@ module NotaKnowledgeBase
         File.directory?(File.join(path, 'docs')) ? File.expand_path(path) : nil
       end
 
+      # Every directory that could hold a gem the user installed for their own
+      # work, whether or not Bundler has narrowed this process to a bundle.
+      #
+      # `Gem.path` alone is not enough, and what defeats it is this plugin's own
+      # isolation. `ensure_gems.rb` writes BUNDLE_PATH into `.bundle/config` so
+      # that installing Nota's dependencies never touches the user's Ruby; a
+      # configured BUNDLE_PATH makes Bundler point GEM_HOME at that private
+      # bundle and leave GEM_PATH empty. `Gem.path` then collapses to the single
+      # directory musa-dsl is guaranteed not to be in. Measured, both ways: with
+      # BUNDLE_PATH, 0 gemspecs found; without it, 19.
+      #
+      # No single fallback covers every Ruby, which is why this is a union:
+      #
+      # - `Gem.user_dir` and `Gem.default_path` come from the Ruby installation
+      #   rather than the environment, so a plain install (RubyInstaller, a
+      #   system Ruby) is still visible through them.
+      # - `Bundler.original_env` is the one that answers under rvm, rbenv or any
+      #   other manager, where the gems live in a GEM_HOME the *environment* set
+      #   and the two above know nothing about. On this developer's machine it
+      #   is the only one that finds anything at all.
+      #
+      # Guarded: this file also runs standalone from the SessionStart hook, in a
+      # plain Ruby with no Bundler loaded.
+      def gem_roots
+        roots = Gem.path + [Gem.user_dir] + Gem.default_path
+
+        if defined?(Bundler)
+          begin
+            original = Bundler.original_env
+            roots << original["GEM_HOME"]
+            roots.concat(original["GEM_PATH"].to_s.split(File::PATH_SEPARATOR))
+          rescue StandardError
+            nil
+          end
+        end
+
+        roots.compact.reject(&:empty?).uniq
+      end
+
       # The newest installed musa-dsl, found WITHOUT resolving it as a dependency.
       #
       # `Gem::Specification.find_by_name` is the obvious call and it is wrong
       # here: the server runs under Bundler with the plugin's own Gemfile, and
       # inside a bundle only the bundled gems exist. musa-dsl is not one of them
       # and must not become one -- Nota does not depend on the framework, it
-      # reads the copy the user installed for their own work. So look at the
-      # gem directories themselves, which Bundler does not narrow.
+      # reads the copy the user installed for their own work. So look at the gem
+      # directories themselves -- all of them, which is what `gem_roots` is for.
       def specification
         return @specification if defined?(@specification)
 
-        candidates = Gem.path.flat_map do |root|
+        candidates = gem_roots.flat_map do |root|
           Dir.glob(File.join(root, "specifications", "#{GEM}-*.gemspec"))
         end
 
@@ -108,9 +147,13 @@ module NotaKnowledgeBase
       def missing_gem_because
         return nil if override || specification
 
-        "#{GEM} is not installed. Nota reads the framework's documentation from " \
-          "the installed gem, so it needs one: `gem install #{GEM}`, or add " \
-          "`gem '#{GEM}'` to the project's Gemfile."
+        # "Not found where I looked" is what is known; "not installed" is a guess,
+        # and it was a wrong one for every user of 1.0.2 and 1.0.3 — who were
+        # told to install a gem they already had. The directories are named so
+        # that the difference is visible without a debugging session.
+        "#{GEM} was not found in any of: #{gem_roots.join(', ')}. Nota reads the " \
+          "framework's documentation from the installed gem, so it needs one: " \
+          "`gem install #{GEM}`, or add `gem '#{GEM}'` to the project's Gemfile."
       end
 
       def available?

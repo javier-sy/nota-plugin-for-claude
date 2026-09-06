@@ -172,6 +172,41 @@ RSpec.describe "MusaDocs" do
     end
   end
 
+  # WHY THIS ONE EXISTS, AND WHY IT NEEDS A SUBPROCESS. 1.0.2 gave the server its
+  # own bundle — BUNDLE_PATH in .bundle/config, so installing Nota's dependencies
+  # never touches the reader's Ruby. A configured BUNDLE_PATH makes Bundler point
+  # GEM_HOME at that private bundle and empty GEM_PATH, and `Gem.path` collapses
+  # to the one directory musa-dsl cannot be in. So `get_doc` and `list_docs`
+  # answered "musa-dsl is not installed" to people who had it installed, for two
+  # releases, on every platform — while the SessionStart hook, which runs in a
+  # plain Ruby, read the same gem correctly in the same session.
+  #
+  # It was invisible to every existing example because none of them run under a
+  # narrowed gem path. This one narrows it on purpose, in a subprocess, the way
+  # Bundler does: the ambient GEM_HOME is captured by requiring bundler first,
+  # then the environment is replaced.
+  it "finds the user's musa-dsl even when the gem path has been narrowed to a bundle" do
+    skip "musa-dsl is not installed here" if NotaKnowledgeBase::MusaDocs.specification.nil?
+
+    musa_docs = File.expand_path("../src/mcp_server/musa_docs", __dir__)
+
+    Dir.mktmpdir do |elsewhere|
+      script = <<~RUBY
+        require "bundler"
+        ENV["GEM_HOME"] = #{elsewhere.inspect}
+        ENV["GEM_PATH"] = ""
+        Gem.clear_paths
+        require #{musa_docs.inspect}
+        puts NotaKnowledgeBase::MusaDocs.version.to_s
+      RUBY
+
+      found = IO.popen([RbConfig.ruby, "-e", script], &:read).to_s.strip
+
+      expect(found).not_to be_empty
+      expect(found).to match(/\A\d+\.\d+/)
+    end
+  end
+
   def with_override(path)
     previous = ENV.fetch("NOTA_MUSA_DSL_PATH", nil)
     ENV["NOTA_MUSA_DSL_PATH"] = path
