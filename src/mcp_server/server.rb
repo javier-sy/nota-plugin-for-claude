@@ -278,10 +278,22 @@ class CheckSetupTool < MCP::Tool
                   "from #{NotaKnowledgeBase::VecExtension.asset_url}"
       end
 
-      # Check knowledge DB
+      # Check knowledge DB.
+      #
+      # An absent index is not a fault, and saying "NOT FOUND" made it read like
+      # one: Search downloads it on the first question asked, exactly as the
+      # loadable above is fetched on first use. Reporting it as a failure sent a
+      # reader looking for a remedy that was not needed -- and the remedy the
+      # setup skill offered, restarting, was not even the one that works.
       db_path = NotaKnowledgeBase::Search.db_path
       has_db = File.exist?(db_path)
-      status << "- **Knowledge base**: #{has_db ? 'present' : 'NOT FOUND'}"
+
+      status << if has_db
+                  "- **Knowledge base**: present"
+                else
+                  "- **Knowledge base**: NOT DOWNLOADED YET — it is fetched on first use, " \
+                  "from the latest release of #{NotaKnowledgeBase::Config.github_repo}"
+                end
 
       if has_db
         begin
