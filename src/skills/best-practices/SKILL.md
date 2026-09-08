@@ -8,6 +8,8 @@ description: >-
 version: 0.1.0
 ---
 
+{{requires:knowledge-base}}
+
 # MusaDSL Best Practices Management
 
 Manage best practices for MusaDSL composition projects. Practices can be generated from composition analyses, added manually, listed, edited, removed, or condensed into a searchable index.

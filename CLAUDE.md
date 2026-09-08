@@ -53,9 +53,21 @@ The MCP server is harness-agnostic: `src/mcp_server/config.rb` reads `NOTA_USER_
 
 **A generated config never computes a path in the user's home.** It is written on one machine and read on another, and `${HOME}` has no value on any Windows install (the home is `USERPROFILE`). Observed on Claude Code 2.x: a `${VAR}` with no value and no `:-default` invalidates the entire server — `mcp-config-invalid: Missing environment variables: HOME` — and the plugin arrives with its skills and none of its tools. The documentation describes a softer behaviour, a warning with the literal text passed through, which would create a folder named `${HOME}`; the config must not refer to `HOME` under either. `Config.user_dir` resolves `~/.config/nota` with Ruby's `Dir.home` on every platform, and `Config.env` reads any variable still holding an unexpanded `${...}` as unset. `spec/invariants_spec.rb` fails if a target asks the harness for anything but `CLAUDE_PLUGIN_ROOT` and `VOYAGE_API_KEY`.
 
-**The server installs its own gems, in its own process** (`mcp_server/boot.rb` + `mcp_server/ensure_gems.rb`). `/plugin install` copies files and `bundler/setup` installs nothing, so a fresh machine met the server with `Bundler::GemNotFound` — and since the server carries `check_setup`, nothing inside the session could say so.
+**Two MCP servers, split by what they need to run.** `setup` runs on the base
+group -- `mcp` and its pure-Ruby dependencies, about 6 MB -- and always starts.
+It owns `check_setup`, `install_dependencies` and `update_knowledge_base`.
+`knowledge-base` needs sqlite3, the sqlite-vec loadable and the index, and when
+they are missing it exits in under 100 ms naming what it wants, instead of
+holding the connection open until the harness kills it.
 
-**The MCP command is `ruby <root>/mcp_server/boot.rb`, never `-r bundler/setup`.** That is the whole mechanism: Bundler must not be the first thing to run, or the process dies before reaching the code that would fix it. `boot.rb` uses stdlib alone, calls `EnsureGems.provide!`, and only then requires Bundler and the server. `bundle check` first (local, no network); `bundle install` only when unsatisfied; five seconds and 16 MB, once. Everything it says goes to **stderr** — stdout is the MCP transport from the first byte. `spec/` fails if `-r bundler/setup` returns to either target.
+**Neither server's command is `-r bundler/setup`.** `setup` boots through
+`mcp_server/boot.rb`, which uses stdlib alone, installs the base group if it is
+absent, and only then loads Bundler: Bundler must not be the first thing to run
+or the process dies before reaching the code that would fix it. `knowledge-base`
+boots through `mcp_server/boot_knowledge.rb`, which does require `bundler/setup`
+first -- and rescues it, because failing there is the correct outcome and the
+message it raises names the missing gem. `spec/` fails if the setup server ever
+requires sqlite3, `db` or `search`.
 
 The hook only *reports* (`EnsureGems.report`), so there is a single owner and nothing to race: it runs beside the server, not before it. It is also why opencode is covered, having no session hook at all.
 
@@ -65,11 +77,30 @@ Their states differ, and it matters for what to do about it. `sqlite3-ruby` has 
 
 **The MCP command is `${NOTA_RUBY:-ruby}`**, in `.mcp.json`, `hooks.json` and the opencode template. `${VAR}` expands in `command` and `args`, not only `env`.
 
-**Nothing large may happen inside the connection handshake.** The harness gives an MCP server 30s to answer `initialize`, and boot.rb already spends part of it installing gems. `run_server` used to download knowledge.db there too (9 MB compressed, 27 MB on disk) — a first session on a slow connection reported `CONNECT_TIMEOUT`. It now arrives through the SessionStart hook, which has its own budget, and through `Search.db_available?` on the first question. A tool call can wait; a handshake cannot.
+**Nothing large may happen inside the connection handshake, and this was
+learned twice.** The harness gives a server 30 s to answer `initialize`.
+`run_server` used to download knowledge.db there; that moved out. Then a clean
+install on Windows showed the same failure from the other half: installing seven
+gems on a cold machine also overran, and the server was killed mid-install,
+leaving a partial bundle indistinguishable from a complete one. The reader saw
+`CONNECT_TIMEOUT`, which names nothing, and `check_setup` -- written for exactly
+this -- was inside the server that had died.
+
+The note below this one had called it: *"Residual risk, unmeasured: a very slow
+connection might not fit, and then the server fails that session."* It was
+recorded as a risk and left unmeasured, and measuring it is what produced the
+two-server split. Installing from a tool call rather than a handshake moves the
+work from a 30 s window to one measured in hours.
 
 **What is actually exercised, per platform.** macOS arm64: everything, daily. Linux x86_64: `build-release.yml` runs on `ubuntu-latest` and does chunks → embed → contract check → retrieval battery, so the database layer and vector search do run there — but nobody has used the plugin on Linux as a composer, and **the CI never runs `spec/` on any platform**. Windows: no complete session on record; 1.0.2 is the first version that can start. Say this plainly wherever it is claimed, and do not upgrade "should work" to "supported" without a session that proves it.
 
-**Residual risk, unmeasured:** the harness's own timeout for an MCP server that has not answered `initialize`. Five seconds fits comfortably; a very slow connection might not, and then the server fails that session — which is exactly what happened before this existed, so it is a strict improvement rather than a new failure.
+**What still sits on the critical path.** The base group -- six pure-Ruby
+gems, no compilation -- installs during `initialize` on a machine that has none.
+It is small and it fits, but it is not nothing: on a connection slow enough,
+the setup server would fail too, and there is no third server behind it. The way
+out if that is ever reported is a stdlib-only responder that answers
+`initialize` before any gem exists. Not built, because the cost is a hand-rolled
+slice of the protocol and a tool list written twice.
 
 They go to `~/.config/nota/bundle`, not the reader's GEM_HOME: a plugin should not mutate someone's Ruby, a system Ruby would need root, and the user directory survives a plugin update while the versioned cache does not. That path cannot travel through `.mcp.json` — `${HOME}` is what the harness cannot expand — but it does not need to: the hook runs in a real Ruby, writes `<plugin_root>/.bundle/config` with an absolute `BUNDLE_PATH`, and the server finds the gems with the `BUNDLE_GEMFILE` it already has.
 
@@ -79,7 +110,7 @@ They go to `~/.config/nota/bundle`, not the reader's GEM_HOME: a plugin should n
 
 **`sqlite-vec` is not a bundled gem, and must not become one again.** The gem's Windows binary is sound — a real `vec0.dll` — but it is published under the platform name `x86_64-mingw32`, which no Ruby on Windows reports (`x64-mingw32` before 3.1, `x64-mingw-ucrt` after). The same defect exists for Linux ARM64 (`arm64-linux` published, `aarch64-linux` reported): [asg017/sqlite-vec#248](https://github.com/asg017/sqlite-vec/issues/248), open and unanswered since 2025-11-04, upstream quiet since 2026-05-18. While the gem is a dependency, `bundle lock` cannot add `x64-mingw-ucrt` at all, and `bundler/setup` refuses on a platform the lockfile does not name — the server never starts. So `mcp_server/vec_extension.rb` fetches the loadable from the sqlite-vec GitHub release instead, pinned, cached under `~/.config/nota/sqlite-vec/<release>/<os>-<cpu>/vec0.<ext>`. Two traps, both fixed in `spec/`: the cached file must be named `vec0` (SQLite reads the entry point from the basename, so `vec0-macos-aarch64.dylib` sends it looking for `sqlite3_vec0macosaarch64_init`), and the version is pinned because an index is written by one vec0 and read by another.
 
-**Open question, with numbers: the plugin may not need a vector index at all.** Measured 2026-09-06 on the shipped corpus — 2390 chunks, 1024 dims, normalised (so cosine is a dot product):
+**Decided 2026-09-08: keep SQLite. The measurements below stand; they were not the deciding factor.** Kept for the record, because the numbers are right and the conclusion drawn from them was wrong. Measured 2026-09-06 on the shipped corpus — 2390 chunks, 1024 dims, normalised (so cosine is a dot product):
 
 | | |
 |---|---|
@@ -90,6 +121,19 @@ They go to `~/.config/nota/bundle`, not the reader's GEM_HOME: a plugin should n
 The search is not the cost; the embedding round-trip is, and it is unavoidable. 96 ms is also the worst case, since `search` scans one collection at a time (`api` is the largest at 1341; `docs` is 142). It scales to 407 ms at 10k vectors and 2 s at 50k, so there is a ceiling, and quantising to int8 or binary sits below it.
 
 Dropping **both** `sqlite-vec` and `sqlite3` — storage as a flat file, metadata in JSON and vectors in a packed `float32` blob — would leave `mcp` as the only runtime dependency, which is pure Ruby, and every platform problem this codebase has had would disappear with it. Verify `bigdecimal` first: `mcp` pulls it, it has a C extension and publishes no precompiled gems, though Ruby ships one. What would be lost: SQL for `upsert`/`prune`/`collection_stats` (~200 lines to rewrite), and **SQLite's locking on `private.db`** when several sessions are open, which is the real regression. **Do not do this for Windows ARM** — the argument that stands on its own is that 2390 vectors are an array, not a database.
+
+**Why it was rejected.** Both reasons are Javier's, and both are about the file
+the measurements never touched. `private.db` holds the user's own indexed works,
+so unlike the shipped corpus it grows without bound and is the one that would
+eventually make a linear scan hurt — 2390 vectors are an array, but a composer's
+archive after some years is not. And it is written, not just read, from a setup
+where several sessions with several MCP servers are open at once, which is the
+normal way of working here rather than an edge case. Concurrent writes to a
+growing file are exactly what SQLite's locking is for, so it is not overhead the
+plugin can shed: it is the requirement.
+
+The 5.5 ms against 96 ms was measured on the public corpus, which is read-only
+and of fixed size. It answered a question about the wrong database.
 
 **Open option: serve the loadable from our own releases.** Today the five tarballs are fetched from upstream's release (`asg017/sqlite-vec`, five platforms, ~200 KB each), which is the honest default — the artifact is theirs and its provenance is checkable. But it makes a runtime dependency on a repository with no commits since 2026-05-18, and nothing stops a release being retagged or deleted. The alternative is to attach the five tarballs to *our* releases and point `VecExtension::REPO` at `Config.github_repo`: about 1 MB added to each release of ours, plus the obligation to re-upload them whenever the pin moves. **Take this option if** upstream deletes or retags v0.1.9, or a download failure is ever reported that is not the user's network. Not before: mirroring a dependency is a maintenance burden bought with a real, if small, loss of provenance.
 

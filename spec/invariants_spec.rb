@@ -377,17 +377,28 @@ RSpec.describe "a platform the server cannot run on" do
   # Before this was detected, the reader got thirty seconds of nothing and then
   # CONNECT_TIMEOUT — a symptom with every cause hidden behind it.
   #
-  # The predicate has to answer for both speakers: boot.rb, so the server stops
-  # instead of spending the connection window, and the hook, whose output is the
-  # only one a reader sees.
+  # What changed with two servers: this machine is no longer one where nothing
+  # runs. The setup server needs none of what is missing, so it starts, and
+  # check_setup and the hook can say what is wrong and how to get around it.
+  # A platform that explains itself is worth more than one that refuses to
+  # start, and refusing was all the single server could do.
   it "is named, and names the way out, on Windows ARM" do
     with_host(cpu: "aarch64", os: "mingw-ucrt") do
       reason = NotaKnowledgeBase::EnsureGems.unsupported_reason
 
       expect(reason).to include("aarch64-mingw-ucrt")
       expect(reason).to include("NOTA_RUBY")
-      expect(NotaKnowledgeBase::EnsureGems.provide!).to be(false)
     end
+  end
+
+  # provide! installs the base group, which is pure Ruby and exists everywhere.
+  # Gating it on unsupported_reason would silence the only thing left able to
+  # speak.
+  it "does not stop the setup server from starting there" do
+    source = File.read(File.expand_path("../src/mcp_server/ensure_gems.rb", __dir__))
+    provide = source[/def provide!.*?\n    end/m]
+
+    expect(provide).not_to include("unsupported_reason")
   end
 
   # The same machine with an x64 Ruby is a supported machine, and nothing must
@@ -475,5 +486,89 @@ RSpec.describe "where the downloaded index lives" do
     manifest = YAML.load_file(File.expand_path("../targets/claude-code.yml", __dir__))
 
     expect(manifest["mcp_env"] || {}).not_to have_key("KNOWLEDGE_DB_PATH")
+  end
+end
+
+
+# The two servers, and the line between them.
+#
+# It is drawn where the dependency graph already draws it: everything pure Ruby
+# on one side, sqlite3 on the other. That is not tidiness -- sqlite3 alone
+# weighs more than the six gems the setup server runs on, and is the only one
+# that can need compiling, so it is what made a first install exceed the thirty
+# seconds Claude Code allows a server to connect in.
+RSpec.describe "the setup server" do
+  let(:manifest) { YAML.load_file(File.expand_path("../targets/claude-code.yml", __dir__)) }
+
+  # The point of the split. If this server ever needs a gem from the index
+  # group, it stops being the one that answers when the other cannot, and the
+  # reader is back to a timeout that explains nothing.
+  it "runs on the base group alone" do
+    source = File.read(File.expand_path("../src/mcp_server/setup_server.rb", __dir__))
+    requires = source.scan(/^\s*require(?:_relative)?\s+["']([^"']+)["']/).flatten
+
+    expect(requires).not_to include("sqlite3")
+    expect(requires).not_to include("db")
+    expect(requires).not_to include("search")
+  end
+
+  # check_setup lives here because a diagnostic that dies with the thing it
+  # diagnoses is not a diagnostic. That is the bug that started this: the tool
+  # written to explain a server that would not start was inside it.
+  it "owns check_setup, and the knowledge base does not" do
+    setup = File.read(File.expand_path("../src/mcp_server/setup_server.rb", __dir__))
+    knowledge = File.read(File.expand_path("../src/mcp_server/server.rb", __dir__))
+
+    expect(setup).to include("class CheckSetupTool")
+    expect(knowledge).not_to include("CheckSetupTool")
+  end
+
+  # Both servers read one Gemfile and differ only in what they leave out, so
+  # there is no second lockfile to drift. The exclusion has to come from the
+  # environment: .bundle/config sits beside the Gemfile and would apply to both.
+  it "differs from the knowledge base only in which groups it excludes" do
+    gemfile = File.read(File.expand_path("../Gemfile", __dir__))
+    expect(gemfile).to match(/group :index do\s+gem "sqlite3"/m)
+
+    config_writer = File.read(File.expand_path("../src/mcp_server/ensure_gems.rb", __dir__))
+    written = config_writer[/desired = \{[^}]*\}/]
+    expect(written).to include("BUNDLE_PATH")
+    expect(written).not_to include("BUNDLE_WITHOUT")
+  end
+end
+
+# A skill whose tools are absent must refuse, not improvise.
+#
+# When the knowledge base server is not running its tools are not merely
+# failing -- they are not in the model's tool list at all, so there is no error
+# to catch. The only defence is the instruction in the skill's own text, and an
+# answer written from the model's own knowledge of MusaDSL is indistinguishable
+# from a sourced one. That is the failure this plugin exists to prevent.
+RSpec.describe "skills that need the knowledge base" do
+  GATED = %w[analysis-framework analyze best-practices code explain index
+             inspiration-framework think].freeze
+  UNGATED = %w[setup hello].freeze
+
+  it "all carry the refusal, and it is written once" do
+    GATED.each do |skill|
+      body = File.read(File.expand_path("../src/skills/#{skill}/SKILL.md", __dir__))
+      expect(body).to include("{{requires:knowledge-base}}"), "#{skill} does not gate on the knowledge base"
+    end
+  end
+
+  # These two only use check_setup, which is on the server that always starts.
+  # Gating them would leave a broken installation with nothing that works.
+  it "does not include the ones that diagnose it" do
+    UNGATED.each do |skill|
+      body = File.read(File.expand_path("../src/skills/#{skill}/SKILL.md", __dir__))
+      expect(body).not_to include("{{requires:knowledge-base}}"), "#{skill} should not gate"
+    end
+  end
+
+  it "tells the reader to stop rather than answer" do
+    fragment = File.read(File.expand_path("../src/fragments/knowledge-base.md", __dir__))
+
+    expect(fragment).to include("check_setup")
+    expect(fragment).to match(/do not|Do not/i)
   end
 end

@@ -9,6 +9,8 @@ description: >-
 version: 0.1.0
 ---
 
+{{requires:knowledge-base}}
+
 # MusaDSL Composition Coding
 
 Help the user program and modify algorithmic compositions using MusaDSL and Ruby. Translate musical intentions into working code.

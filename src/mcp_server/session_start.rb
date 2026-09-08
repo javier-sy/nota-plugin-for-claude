@@ -3,47 +3,32 @@
 
 # What runs when a session opens.
 #
-# Three jobs, in this order because the last is the one whose output matters:
+# One job that nothing else can do, and one line that nothing else can say.
 #
-#   0. Say if the server is still installing its gems (it installs them itself,
-#      in its own process; this only explains a slower first session)
-#   1. Keep knowledge.db current, and the sqlite-vec extension present (silent)
-#   2. Put musa-dsl's conceptual layer into context, read from the INSTALLED gem
+# The job: put musa-dsl's conceptual layer into context, read from the INSTALLED
+# gem. Claude Code adds a SessionStart hook's stdout to the session, so this is
+# the only way that text can be there BEFORE anyone asks a question. A tool
+# cannot do it -- a tool answers when called, and by then the model has already
+# decided how to think about the problem.
 #
-# For SessionStart hooks, Claude Code adds stdout to the session context, so
-# what step 2 prints is what the model reads. Step 1 prints nothing on success.
+# The line: whether the plugin still needs setting up. This used to install the
+# gems and download the index; both moved to the setup server's tools, where a
+# reader can see them work and where the budget is hours rather than the 120
+# seconds a hook gets. What is left here is one sentence naming the state and
+# the command that fixes it -- said at session start, which is the only moment
+# the reader is looking and has not asked for anything yet.
 #
-# Always exits 0: a session that cannot update an index or find a gem is a
-# session that says so, not one that fails to open.
+# Always exits 0: a session that cannot read a gem is a session that says so,
+# not one that fails to open.
 
 require_relative 'ensure_gems'
-require_relative 'ensure_db'
 require_relative 'musa_docs'
-require_relative 'vec_extension'
 
 begin
-  # Only a report. The server installs its own gems, in its own process, so that
-  # nothing has to be reopened — this runs beside it and would race it. Silent
-  # when the bundle is already satisfied, which is every session but the first.
-  gems = NotaKnowledgeBase::EnsureGems.report
-  puts gems if gems
-rescue StandardError
-  nil
-end
-
-begin
-  updated = NotaKnowledgeBase::EnsureDB.run
-  puts "[Nota] Knowledge base updated to #{updated}." if updated
-rescue StandardError
-  # Graceful degradation: an index that could not be refreshed is still an index.
-end
-
-begin
-  # Fetch the loadable extension once, here, so that the first question of the
-  # session is not the one that pays for it. Silent either way: a download that
-  # fails now is retried by the tool that needs it, which is also the only place
-  # that can say what its absence costs.
-  NotaKnowledgeBase::VecExtension.ensure!
+  # Only a report, and only when there is something to act on. The setup server
+  # owns installing: one owner, nothing to race.
+  status = NotaKnowledgeBase::EnsureGems.report
+  puts status if status
 rescue StandardError
   nil
 end

@@ -7,6 +7,8 @@ description: >-
 version: 0.2.0
 ---
 
+{{requires:knowledge-base}}
+
 # Manage Private Works Index
 
 Guide the user through managing their private composition index — adding, listing, updating, and removing works from `private.db` — using the MCP tools provided by the musadsl-kb server.

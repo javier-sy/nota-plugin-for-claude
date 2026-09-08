@@ -2,6 +2,13 @@
 # frozen_string_literal: true
 
 # MCP server exposing MusaDSL knowledge base tools.
+#
+# Everything here needs the index: sqlite3, the sqlite-vec loadable, and
+# knowledge.db. What does not -- reporting the state of the installation,
+# finishing it, updating the index -- lives in setup_server.rb, which runs on
+# pure Ruby and therefore answers when this one cannot start. check_setup moved
+# there for that reason: a diagnostic that dies with the thing it diagnoses is
+# not a diagnostic.
 
 require "mcp"
 
@@ -231,104 +238,6 @@ class SimilarWorksTool < MCP::Tool
     def call(description:, server_context:)
       result = NotaKnowledgeBase::Search.similar_works(description)
       MCP::Tool::Response.new([{ type: "text", text: result }])
-    end
-  end
-end
-
-class CheckSetupTool < MCP::Tool
-  description(
-    "Check the setup status of the MusaDSL knowledge base plugin. " \
-    "Reports whether the API key is configured and the knowledge base is available."
-  )
-
-  class << self
-    def call(server_context:)
-      require_relative "embeddings"
-
-      status = []
-      status << "## Plugin Setup Status"
-      status << ""
-
-      # Check Voyage API key: not set vs set-but-invalid vs valid
-      api_key_raw = NotaKnowledgeBase::Config.env("VOYAGE_API_KEY")
-      if api_key_raw.nil? || api_key_raw.empty?
-        status << "- **Voyage API key**: NOT CONFIGURED — no VOYAGE_API_KEY environment variable found. " \
-                  "You need to obtain a key from https://dash.voyageai.com/ and add it to your shell profile."
-      else
-        # Test the key with a minimal embedding call
-        begin
-          client = NotaKnowledgeBase::Voyage::Client.new(input_type: "query")
-          client.embed(["test"])
-          status << "- **Voyage API key**: valid"
-        rescue => e
-          status << "- **Voyage API key**: SET BUT NOT WORKING — the key is configured but the API " \
-                    "rejected it. It may be expired, revoked, or mistyped. Error: #{e.message}"
-        end
-      end
-
-      # Check the loadable extension. It comes before the index in the report
-      # because without it the index cannot be opened at all.
-      if NotaKnowledgeBase::VecExtension.target.nil?
-        status << "- **sqlite-vec extension**: NOT AVAILABLE for #{NotaKnowledgeBase::VecExtension.platform_name} — " \
-                  "upstream publishes no build for this platform."
-      elsif NotaKnowledgeBase::VecExtension.available?
-        status << "- **sqlite-vec extension**: `#{NotaKnowledgeBase::VecExtension.path}`"
-      else
-        status << "- **sqlite-vec extension**: NOT DOWNLOADED YET — it is fetched on first use " \
-                  "from #{NotaKnowledgeBase::VecExtension.asset_url}"
-      end
-
-      # Check knowledge DB.
-      #
-      # An absent index is not a fault, and saying "NOT FOUND" made it read like
-      # one: Search downloads it on the first question asked, exactly as the
-      # loadable above is fetched on first use. Reporting it as a failure sent a
-      # reader looking for a remedy that was not needed -- and the remedy the
-      # setup skill offered, restarting, was not even the one that works.
-      db_path = NotaKnowledgeBase::Search.db_path
-      has_db = File.exist?(db_path)
-
-      status << if has_db
-                  "- **Knowledge base**: present"
-                else
-                  "- **Knowledge base**: NOT DOWNLOADED YET — it is fetched on first use, " \
-                  "from the latest release of #{NotaKnowledgeBase::Config.github_repo}"
-                end
-
-      if has_db
-        begin
-          db = NotaKnowledgeBase::DB.open
-          stats = NotaKnowledgeBase::DB.collection_stats(db)
-          db.close
-          status << "- **Collections**:"
-          stats.each { |name, count| status << "  - #{name}: #{count} chunks" }
-        rescue => e
-          status << "- **DB error**: #{e.message}"
-        end
-      end
-
-      # Check private DB
-      # Named, not just tested: when the harness could not tell us where the
-      # user's home is, this is the line that shows what we resolved instead.
-      status << "- **User directory**: `#{NotaKnowledgeBase::Config.user_dir}`"
-
-      private_db_path = NotaKnowledgeBase::DB.default_private_db_path
-      has_private_db = File.exist?(private_db_path)
-      private_label = has_private_db ? 'present' : "not present — use #{NotaKnowledgeBase::Config.cmd_ref('index')} to manage your private works"
-      status << "- **Private works DB**: #{private_label}"
-
-      if has_private_db
-        begin
-          private_db = NotaKnowledgeBase::DB.open(private_db_path)
-          private_stats = NotaKnowledgeBase::DB.collection_stats(private_db)
-          private_db.close
-          private_stats.each { |name, count| status << "  - #{name}: #{count} chunks" }
-        rescue => e
-          status << "  - **Private DB error**: #{e.message}"
-        end
-      end
-
-      MCP::Tool::Response.new([{ type: "text", text: status.join("\n") }])
     end
   end
 end
@@ -680,7 +589,7 @@ module NotaKnowledgeBase
         "MusaDSL knowledge base server. Provides semantic search over " \
         "documentation, API reference, demo examples, and composition works " \
         "for the MusaDSL algorithmic composition framework in Ruby.",
-      tools: [SearchTool, ApiReferenceTool, GetDocTool, ListDocsTool, LintTool, SimilarWorksTool, CheckSetupTool,
+      tools: [SearchTool, ApiReferenceTool, GetDocTool, ListDocsTool, LintTool, SimilarWorksTool,
               ListWorksTool, AddWorkTool, RemoveWorkTool, IndexStatusTool,
               GetAnalysisFrameworkTool, SaveAnalysisFrameworkTool, ResetAnalysisFrameworkTool, AddAnalysisTool,
               GetInspirationFrameworkTool, SaveInspirationFrameworkTool, ResetInspirationFrameworkTool,

@@ -110,15 +110,25 @@ module NotaKnowledgeBase
       [RbConfig.ruby, exe, *arguments]
     end
 
-    def environment
-      { "BUNDLE_GEMFILE" => gemfile }
+    # The environment a bundler subprocess runs in.
+    #
+    # `index: false` is the setup server's world -- everything but the group
+    # holding sqlite3. `index: true` is the whole thing, which is what the
+    # knowledge base needs and what install! is asked for.
+    def environment(index: true)
+      without = index ? "development" : "development:index"
+
+      { "BUNDLE_GEMFILE" => gemfile, "BUNDLE_WITHOUT" => without }
     end
 
     # Point Bundler at the user directory. Written only when it would change:
     # the file is read on every bundler run, and rewriting it each session would
     # be noise in something a reader may have edited on purpose.
+    # Only BUNDLE_PATH. Which groups to leave out is decided per server and
+    # travels in the environment: this file sits beside the Gemfile, so anything
+    # written here would apply to both servers, and they need different answers.
     def write_bundle_config
-      desired = { "BUNDLE_PATH" => bundle_path, "BUNDLE_WITHOUT" => "development" }
+      desired = { "BUNDLE_PATH" => bundle_path }
       path = File.join(plugin_root, ".bundle", "config")
 
       return true if File.exist?(path) && (YAML.safe_load_file(path) rescue nil) == desired
@@ -130,64 +140,80 @@ module NotaKnowledgeBase
       false
     end
 
-    def satisfied?
-      _out, _err, status = Open3.capture3(environment, *bundle_command("check"))
+    # Whether the gems for a given stage are already there.
+    #
+    # Asked of bundler rather than of a marker we wrote: a marker can disagree
+    # with the directory, and a half-finished install is exactly the state that
+    # has to be told apart from a finished one.
+    def satisfied?(index: true)
+      _out, _err, status = Open3.capture3(environment(index: index), *bundle_command("check"))
       status.success?
     rescue StandardError
       false
     end
 
-    # Called by boot.rb, in the server's own process, before Bundler exists.
-    # Everything it says goes to stderr: stdout is the MCP transport, and one
-    # stray line on it is a protocol error rather than a message.
+    # Called by the setup server's boot, before Bundler exists.
     #
-    # This is where the install lives, and the only place, so there is nothing
-    # to race against — and it is what spares the reader a restart. The server
-    # process is the one that needs the gems; a process that can install them
-    # before it loads them does not have to die first.
+    # Installs only the base group -- six pure-Ruby gems, about 6 MB -- which is
+    # what this server needs to speak MCP at all. That is the one install still
+    # on the connection's critical path, and it is small and compiles nothing;
+    # everything that made a first install exceed thirty seconds is in the index
+    # group and is installed later, from a tool, where the budget is hours
+    # rather than seconds.
+    #
+    # Not gated on unsupported_reason. A platform with no sqlite3 build can
+    # still run this server, and a server that runs is a server that can say
+    # what is wrong -- which is worth more than refusing to start.
+    #
+    # Everything it says goes to stderr: stdout is the MCP transport.
     def provide!
-      reason = unsupported_reason
-      if reason
-        warn reason
-        return false
-      end
-
       return true unless installed?
       return false unless write_bundle_config
-      return true if satisfied?
+      return true if satisfied?(index: false)
 
-      warn "[Nota] Installing the MCP server's Ruby dependencies into #{bundle_path} " \
-           "(seven gems, about 16 MB; this happens once)."
+      warn "[Nota] Installing the base dependencies into #{bundle_path} " \
+           "(six gems, about 6 MB; this happens once)."
 
-      _out, err, status = Open3.capture3(environment, *bundle_command("install"))
+      ok, output = install!(index: false)
 
-      if status.success?
-        warn "[Nota] Dependencies installed."
-        true
+      if ok
+        warn "[Nota] Base dependencies installed."
       else
-        warn "[Nota] Could not install the MCP server's dependencies:"
-        last_lines(err).each { |line| warn "  #{line}" }
-        warn "[Nota] Install them by hand: bundle install --gemfile #{gemfile} --without development"
-        false
+        warn "[Nota] Could not install the base dependencies:"
+        last_lines(output).each { |line| warn "  #{line}" }
       end
-    rescue StandardError => e
-      warn "[Nota] Could not install the MCP server's dependencies: #{e.class}: #{e.message}"
-      false
+
+      ok
     end
 
-    # Called by the SessionStart hook, which runs beside the server and must not
-    # install anything: one owner, no race. It only says what is about to happen,
-    # so that a first session that takes a few seconds is explained rather than
-    # merely slow.
+    # Installs a stage. Returns [ok, output] so that a caller can show what
+    # happened -- this runs from a tool, whose result the reader actually sees,
+    # unlike the stderr the old design shouted into.
+    def install!(index: true)
+      return [false, "the plugin is not installed (no Gemfile at #{gemfile})"] unless installed?
+      return [false, "could not write #{File.join(plugin_root, '.bundle', 'config')}"] unless write_bundle_config
+
+      out, err, status = Open3.capture3(environment(index: index), *bundle_command("install"))
+
+      [status.success?, status.success? ? out : err]
+    rescue StandardError => e
+      [false, "#{e.class}: #{e.message}"]
+    end
+
+    # What the SessionStart hook says, if anything. It no longer installs
+    # anything -- one owner, and it is the tool -- so this only names a state
+    # the reader can act on, and stays quiet when there is nothing to act on.
     def report
-      reason = unsupported_reason
-      return reason if reason
-
       return nil unless installed?
-      return nil if satisfied?
+      return nil if satisfied?(index: true)
 
-      "[Nota] The MCP server is installing its Ruby dependencies (seven gems, about 16 MB, " \
-      "once). Its tools may take a few seconds longer than usual to answer the first time."
+      if satisfied?(index: false)
+        "[Nota] The knowledge base is not installed yet. Run #{Config.cmd_ref('setup')} once " \
+        "to finish setting it up; it takes a few seconds and only happens on a new machine."
+      else
+        "[Nota] Nota is still installing what it needs. Run #{Config.cmd_ref('setup')} to see " \
+        "how far it got and to finish."
+      end
     rescue StandardError
       nil
     end

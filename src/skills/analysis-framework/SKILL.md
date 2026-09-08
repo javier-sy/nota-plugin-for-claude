@@ -6,6 +6,8 @@ description: >-
 version: 0.1.0
 ---
 
+{{requires:knowledge-base}}
+
 # Manage Analysis Framework
 
 View, customize, or reset the analysis framework that defines the analytical dimensions used by `{{cmd:analyze}}`.

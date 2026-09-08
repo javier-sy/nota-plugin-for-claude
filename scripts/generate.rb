@@ -48,6 +48,24 @@ def copy_dir_excluding(src_dir, dst_dir, exclude_patterns)
   end
 end
 
+# {{requires:NAME}} pulls in src/fragments/NAME.md.
+#
+# One fragment, injected wherever it applies, because the rule it carries -- a
+# skill whose tools are absent must refuse rather than improvise -- has to say
+# the same thing in all eight skills that need it. A rule copied into eight
+# files is a rule that will eventually disagree with itself.
+def resolve_fragments(text)
+  text.gsub(/{{requires:([a-z-]+)}}/) do
+    path = File.join(SRC, "fragments", "#{Regexp.last_match(1)}.md")
+    unless File.exist?(path)
+      warn "  Warning: fragment not found at #{path}"
+      next ""
+    end
+
+    File.read(path, encoding: "utf-8").strip
+  end
+end
+
 def resolve_cmd(text, target_config)
   cmd_format = target_config["cmd_format"] || "{skill}"
   text.gsub(/{{cmd:([a-z-]+)}}/) do
@@ -74,10 +92,10 @@ def transform_skill(skill_name, target_config)
       line =~ /^([a-z_]+):/ && !keep.include?($1)
     end
     new_fm = filtered.join("\n")
-    new_body = resolve_cmd(body, target_config)
+    new_body = resolve_cmd(resolve_fragments(body), target_config)
     "---\n#{new_fm}\n---\n#{new_body}"
   else
-    resolve_cmd(content, target_config)
+    resolve_cmd(resolve_fragments(content), target_config)
   end
 end
 
@@ -117,20 +135,35 @@ def generate_claude_code(manifest, target_config, target_dir)
 
   if emit["mcp_json"]
     mcp_env = target_config["mcp_env"] || {}
+    # Two servers, split by what they need to run.
+    #
+    # `setup` runs on pure Ruby and always connects, so it can say what is
+    # missing and finish installing it. `knowledge-base` needs sqlite3 and the
+    # index, and exits at once when they are absent rather than holding the
+    # connection open for the thirty seconds Claude Code allows and then being
+    # killed mid-install -- which is what a single server did, and why the
+    # reader got CONNECT_TIMEOUT and no way to ask why.
+    #
+    # They differ only in which bundler groups they exclude and which file they
+    # boot. The exclusion is here, per server, and not in .bundle/config, which
+    # sits beside the Gemfile and would apply to both.
     mcp_json = {
       "mcpServers" => {
+        "setup" => {
+          "command" => "${NOTA_RUBY:-ruby}",
+          "args" => ["#{prefix}mcp_server/boot.rb"],
+          "env" => mcp_env.merge("BUNDLE_WITHOUT" => "development:index"),
+          "cwd" => prefix.sub(%r{/$}, "")
+        },
         "knowledge-base" => {
           # The interpreter is a knob, not a constant. Windows on ARM needs a
-          # Ruby built for x64 (nothing the server rests on is published for
+          # Ruby built for x64 (nothing this server rests on is published for
           # aarch64-mingw-ucrt), and telling someone to put that Ruby first on
           # PATH would hijack every other thing they do with Ruby on that
           # machine. NOTA_RUBY points this plugin at one interpreter and leaves
           # the rest alone.
           "command" => "${NOTA_RUBY:-ruby}",
-          # boot.rb, not `-r bundler/setup server.rb`: Bundler must not be the
-          # first thing to run, or a machine without the gems loses the server
-          # before the code that installs them is reached. See mcp_server/boot.rb.
-          "args" => ["#{prefix}mcp_server/boot.rb"],
+          "args" => ["#{prefix}mcp_server/boot_knowledge.rb"],
           "env" => mcp_env,
           "cwd" => prefix.sub(%r{/$}, "")
         }
@@ -161,7 +194,10 @@ def generate_claude_code(manifest, target_config, target_dir)
                 # `bundle check`, which is local.
                 { "type" => "command",
                   "command" => %("${NOTA_RUBY:-ruby}" "#{prefix}#{hook_script}"),
-                  "timeout" => 120 }
+                  # The hook reads one file from the installed gem and prints it. It no
+                  # longer installs gems or downloads a 27 MB index -- those moved to
+                  # the setup server's tools -- so it does not need a minute and a half.
+                  "timeout" => 20 }
               ]
             }
           ]

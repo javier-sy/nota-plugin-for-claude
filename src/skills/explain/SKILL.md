@@ -12,6 +12,8 @@ description: >-
 version: 0.1.0
 ---
 
+{{requires:knowledge-base}}
+
 # MusaDSL Explain Skill
 
 You are explaining MusaDSL concepts to a user who is composing algorithmic music with Ruby.

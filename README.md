@@ -30,22 +30,21 @@ x64 Ruby under emulation; rather than putting it first on PATH, point Nota at it
 [Environment]::SetEnvironmentVariable('NOTA_RUBY', 'C:\Ruby34-x64\bin\ruby.exe', 'User')
 ```
 
-**The server's gems install themselves**, on the first session, into
-`~/.config/nota/bundle` — seven of them (`mcp`, `sqlite3` and five transitive
-dependencies), about 16 MB, five seconds. Your own Ruby is not touched, and the
-gems survive plugin updates. Nothing to restart: the server installs them in its
-own process before it loads them, so the first session is a few seconds slower
-and then works.
+Nota installs in two steps, and the second one is a command you run.
 
-If that fails — no network, a proxy — this is the same thing by hand:
+The plugin itself brings only what it needs to talk: six pure-Ruby gems, about
+6 MB, installed into `~/.config/nota/bundle` when the first session opens. Your
+own Ruby is not touched and they survive plugin updates.
 
-```bash
-bundle install --gemfile ~/.claude/plugins/cache/yeste-studio/nota/<version>/Gemfile --without development
-```
+Everything the knowledge base runs on — `sqlite3`, the `sqlite-vec` SQLite
+extension, and the index — is installed by **`/nota:setup`**, which you run once
+after installing. It is done that way because on a new machine that install
+takes longer than the thirty seconds Claude Code allows a server to start in:
+run from a command, it has as long as it needs, and it can tell you what it is
+doing.
 
-The `sqlite-vec` SQLite extension the knowledge base runs on is not among them:
-it is downloaded on first use (about 200 KB, from the sqlite-vec GitHub release)
-and cached under `~/.config/nota/sqlite-vec/`. `/nota:setup` reports where.
+Until you run it, `/nota:setup` and `/nota:hello` work and the rest say what is
+missing rather than answering without the knowledge base.
 
 ### Install
 
@@ -59,13 +58,20 @@ Inside Claude Code, run:
 /plugin install nota@yeste.studio
 ```
 
-Then add the API key to your shell profile:
+Add the API key to your shell profile:
 
 ```bash
 export VOYAGE_API_KEY="your-key-here"
 ```
 
-The knowledge base is **automatically downloaded** on first session start. Run `/nota:setup` to verify everything is working.
+Then, in a session that has the key:
+
+```
+/nota:setup
+```
+
+It reports what is still missing and installs it. Reload plugins when it is
+done, and the index downloads itself the first time you ask a question.
 
 ## Skills
 

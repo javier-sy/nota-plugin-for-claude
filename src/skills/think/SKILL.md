@@ -9,6 +9,8 @@ description: >-
 version: 0.2.0
 ---
 
+{{requires:knowledge-base}}
+
 # MusaDSL Creative Thinking
 
 Help the user generate ideas for algorithmic compositions. Expand the creative space by connecting musical intentions with MusaDSL's capabilities.

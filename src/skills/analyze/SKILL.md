@@ -6,6 +6,8 @@ description: >-
 version: 0.1.0
 ---
 
+{{requires:knowledge-base}}
+
 # Analyze a Composition
 
 Generate a structured musical analysis of a composition project, guided by the analysis framework. The analysis interprets the code musically and stores the result as searchable knowledge.

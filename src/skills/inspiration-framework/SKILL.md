@@ -6,6 +6,8 @@ description: >-
 version: 0.1.0
 ---
 
+{{requires:knowledge-base}}
+
 # Manage Inspiration Framework
 
 View, customize, or reset the inspiration framework that defines the creative dimensions used by `{{cmd:think}}`.
