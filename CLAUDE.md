@@ -14,9 +14,13 @@ It provides 10 interactive skills, a semantic search MCP server backed by sqlite
 nota-plugin/                      # source repo (harness-agnostic)
 ├── src/                          # FUENTE agnóstica
 │   ├── manifest.yml              #   Neutral descriptor: name, version, mcp, skills, instructions
-│   ├── mcp_server/               #   Ruby MCP server (22 tools) — harness-agnostic
+│   ├── mcp_server/               #   Two Ruby MCP servers — harness-agnostic
+│   │   ├── boot.rb               #     setup server: needs no gems, so it always connects
+│   │   ├── stdio_server.rb       #     the slice of MCP it speaks, on the stdlib alone
+│   │   ├── setup_server.rb       #     its 3 tools: check, install, update the index
+│   │   ├── boot_knowledge.rb     #     knowledge-base server: fails fast when gems are absent
 │   │   ├── config.rb             #     Config.user_dir / cmd_ref / github_repo (env-driven)
-│   │   ├── server.rb             #     Tool definitions
+│   │   ├── server.rb             #     the knowledge base's 22 tool definitions
 │   │   ├── search.rb             #     Dual-DB semantic search
 │   │   ├── chunker.rb            #     Source → JSONL chunks
 │   │   ├── indexer.rb            #     Chunk + embed + store orchestrator
@@ -53,27 +57,32 @@ The MCP server is harness-agnostic: `src/mcp_server/config.rb` reads `NOTA_USER_
 
 **A generated config never computes a path in the user's home.** It is written on one machine and read on another, and `${HOME}` has no value on any Windows install (the home is `USERPROFILE`). Observed on Claude Code 2.x: a `${VAR}` with no value and no `:-default` invalidates the entire server — `mcp-config-invalid: Missing environment variables: HOME` — and the plugin arrives with its skills and none of its tools. The documentation describes a softer behaviour, a warning with the literal text passed through, which would create a folder named `${HOME}`; the config must not refer to `HOME` under either. `Config.user_dir` resolves `~/.config/nota` with Ruby's `Dir.home` on every platform, and `Config.env` reads any variable still holding an unexpanded `${...}` as unset. `spec/invariants_spec.rb` fails if a target asks the harness for anything but `CLAUDE_PLUGIN_ROOT` and `VOYAGE_API_KEY`.
 
-**Two MCP servers, split by what they need to run.** `setup` runs on the base
-group -- `mcp` and its pure-Ruby dependencies, about 6 MB -- and always starts.
-It owns `check_setup`, `install_dependencies` and `update_knowledge_base`.
-`knowledge-base` needs sqlite3, the sqlite-vec loadable and the index, and when
+**Two MCP servers, split by what they need to run.** `setup` needs *nothing* --
+`mcp_server/stdio_server.rb` speaks the five methods it uses on the standard
+library -- so it always connects, on any machine, in any state. It owns
+`check_setup`, `install_dependencies` and `update_knowledge_base`.
+`knowledge-base` needs the gems, the sqlite-vec loadable and the index, and when
 they are missing it exits in under 100 ms naming what it wants, instead of
 holding the connection open until the harness kills it.
 
 **Neither server's command is `-r bundler/setup`.** `setup` boots through
-`mcp_server/boot.rb`, which uses stdlib alone, installs the base group if it is
-absent, and only then loads Bundler: Bundler must not be the first thing to run
-or the process dies before reaching the code that would fix it. `knowledge-base`
-boots through `mcp_server/boot_knowledge.rb`, which does require `bundler/setup`
+`mcp_server/boot.rb`, which requires no gem at all, so there is nothing Bundler
+could be asked for and nothing that can be absent. `knowledge-base` boots
+through `mcp_server/boot_knowledge.rb`, which does require `bundler/setup`
 first -- and rescues it, because failing there is the correct outcome and the
 message it raises names the missing gem. `spec/` fails if the setup server ever
-requires sqlite3, `db` or `search`.
+reaches for `MCP::`, sqlite3, `db` or `search`.
+
+**The gems are one set, and there is no longer a stage of one.** They existed in
+two groups only so that a first install could be cut in half to fit the
+connection window; nothing boots on half a bundle now, so `EnsureGems` asks one
+question — `satisfied?` — and `install_dependencies` installs the lot.
 
 The hook only *reports* (`EnsureGems.report`), so there is a single owner and nothing to race: it runs beside the server, not before it. It is also why opencode is covered, having no session hook at all.
 
 **Windows on ARM cannot run this, and neither dependency is ours to fix.** Ruby there reports `aarch64-mingw-ucrt`. `sqlite3` publishes no binary for it (`x64-mingw-ucrt` is its only Windows platform) and cannot be compiled there either — SQLite's own `config.sub` rejects the `aarch64-w64-windows-gnu` triplet. `sqlite-vec`'s only Windows loadable is x86_64. **Adding the platform to `Gemfile.lock` changes nothing**: there is no gem to resolve.
 
-Their states differ, and it matters for what to do about it. `sqlite3-ruby` has an open PR — [sparklemotion/sqlite3-ruby#650](https://github.com/sparklemotion/sqlite3-ruby/pull/650), cross-compiled with `rake-compiler-dock` ≥ 1.10.0, green in the author's fork since November 2025, held back by the maintainer over unrelated Windows CI failures, last activity April 2026. Stalled, not absent; a comment there with a real use case is the cheapest thing that could move it. Nokogiri's equivalent PR has not shipped either, and RubyInstaller offers Windows-on-ARM only for Ruby 3.4. sqlite-vec, by contrast, has no build and no attempt — but it is one C file with a published amalgamation, so building it ourselves is genuinely cheap. What stops that is verification: GitHub's `windows-11-arm` runners are documented as private-repository and paid, so we could cross-compile a loadable we cannot run. `EnsureGems.unsupported_reason` detects it and both boot.rb and the hook say so — the first to stop rather than spend the harness's 30s connection window, the second because the hook's output is the only one a reader sees. The way out is an x64 Ruby under emulation, selected with `NOTA_RUBY` so it need not take over PATH.
+Their states differ, and it matters for what to do about it. `sqlite3-ruby` has an open PR — [sparklemotion/sqlite3-ruby#650](https://github.com/sparklemotion/sqlite3-ruby/pull/650), cross-compiled with `rake-compiler-dock` ≥ 1.10.0, green in the author's fork since November 2025, held back by the maintainer over unrelated Windows CI failures, last activity April 2026. Stalled, not absent; a comment there with a real use case is the cheapest thing that could move it. Nokogiri's equivalent PR has not shipped either, and RubyInstaller offers Windows-on-ARM only for Ruby 3.4. sqlite-vec, by contrast, has no build and no attempt — but it is one C file with a published amalgamation, so building it ourselves is genuinely cheap. What stops that is verification: GitHub's `windows-11-arm` runners are documented as private-repository and paid, so we could cross-compile a loadable we cannot run. `EnsureGems.unsupported_reason` detects it, and the only place that says it is the setup server — `check_setup` reports it and `install_dependencies` refuses with it. That is deliberate: the sentence is long, it is what someone has to act on, and a tool result is read while a boot's stderr is not. The hook says nothing about it and points at `/nota:setup` like on any other machine, which is where the true answer is. The way out is an x64 Ruby under emulation, selected with `NOTA_RUBY` so it need not take over PATH.
 
 **The MCP command is `${NOTA_RUBY:-ruby}`**, in `.mcp.json`, `hooks.json` and the opencode template. `${VAR}` expands in `command` and `args`, not only `env`.
 
@@ -90,19 +99,28 @@ The note below this one had called it: *"Residual risk, unmeasured: a very slow
 connection might not fit, and then the server fails that session."* It was
 recorded as a risk and left unmeasured, and measuring it is what produced the
 two-server split. Installing from a tool call rather than a handshake moves the
-work from a 30 s window to one measured in hours.
+work from a 30 s window to one measured in hours -- and the server that offers
+that tool now needs nothing itself, so there is no smaller install left to race.
 
 **What is actually exercised, per platform.** macOS arm64: everything, daily. Linux x86_64: `build-release.yml` runs on `ubuntu-latest` and does chunks → embed → contract check → retrieval battery, so the database layer and vector search do run there — but nobody has used the plugin on Linux as a composer, and **the CI never runs `spec/` on any platform**. Windows: no complete session on record; 1.0.2 is the first version that can start. Say this plainly wherever it is claimed, and do not upgrade "should work" to "supported" without a session that proves it.
 
-**What still sits on the critical path.** The base group -- six pure-Ruby
-gems, no compilation -- installs during `initialize` on a machine that has none.
-It is small and it fits, but it is not nothing: on a connection slow enough,
-the setup server would fail too, and there is no third server behind it. The way
-out if that is ever reported is a stdlib-only responder that answers
-`initialize` before any gem exists. Not built, because the cost is a hand-rolled
-slice of the protocol and a tool list written twice.
+**Nothing sits on the critical path any more, and the way there is worth
+recording.** The note that stood here said a stdlib-only responder was the way
+out and was not worth building. What was tried first was vendoring `mcp`, on the
+belief that json_schemer loads only when a tool has an input schema to validate
+and that these tools, having no arguments, would never pull it. **That is false**:
+`mcp/tool/schema.rb` requires json_schemer at load time, json_schemer requires
+bigdecimal, and bigdecimal carries a C extension and stopped being a default gem
+in Ruby 3.4. The measurement that appeared to confirm the belief tested
+`require "mcp"` — which does miss it, because `MCP::Tool` is autoloaded and the
+require only happens at `class X < MCP::Tool`. **Boot with an empty `GEM_HOME`;
+anything less is not a control.** Vendoring the real closure would have been
+1.26 MB of foreign code plus a native gem from the reader's own Ruby, to answer
+three questions with text. So the responder was built after all, and the reason
+it had been declined — "a tool list written twice" — had expired with the
+split: those three tools live only on this server.
 
-They go to `~/.config/nota/bundle`, not the reader's GEM_HOME: a plugin should not mutate someone's Ruby, a system Ruby would need root, and the user directory survives a plugin update while the versioned cache does not. That path cannot travel through `.mcp.json` — `${HOME}` is what the harness cannot expand — but it does not need to: the hook runs in a real Ruby, writes `<plugin_root>/.bundle/config` with an absolute `BUNDLE_PATH`, and the server finds the gems with the `BUNDLE_GEMFILE` it already has.
+The gems go to `~/.config/nota/bundle`, not the reader's GEM_HOME: a plugin should not mutate someone's Ruby, a system Ruby would need root, and the user directory survives a plugin update while the versioned cache does not. That path cannot travel through `.mcp.json` — `${HOME}` is what the harness cannot expand — but it does not need to: the hook runs in a real Ruby, writes `<plugin_root>/.bundle/config` with an absolute `BUNDLE_PATH`, and the server finds the gems with the `BUNDLE_GEMFILE` it already has.
 
 **The private bundle hides the user's own gems, and `musa_docs.rb` has to work around it.** `BUNDLE_PATH` makes Bundler point `GEM_HOME` at the private bundle and empty `GEM_PATH`, so `Gem.path` collapses to one directory — which broke `get_doc` and `list_docs` for the whole of 1.0.2 and 1.0.3, on every platform, while the hook (plain Ruby, no Bundler) kept working and made it look like a Windows problem. `MusaDocs.gem_roots` is the union that fixes it, and it needs all three parts: `Gem.user_dir`/`Gem.default_path` for a plain install, `Bundler.original_env` for rvm/rbenv — on a machine using rvm the last is the only one that finds anything. **Any new code that looks for a user-installed gem must go through `gem_roots`, never `Gem.path`.**
 

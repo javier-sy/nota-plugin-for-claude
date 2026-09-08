@@ -32,16 +32,15 @@ x64 Ruby under emulation; rather than putting it first on PATH, point Nota at it
 
 Nota installs in two steps, and the second one is a command you run.
 
-The plugin itself brings only what it needs to talk: six pure-Ruby gems, about
-6 MB, installed into `~/.config/nota/bundle` when the first session opens. Your
-own Ruby is not touched and they survive plugin updates.
+Installing the plugin downloads nothing and installs nothing. Everything the
+knowledge base needs — the Ruby gems, the `sqlite-vec` SQLite extension, and the
+index itself — is installed by **`/nota:setup`**, which you run once afterwards.
 
-Everything the knowledge base runs on — `sqlite3`, the `sqlite-vec` SQLite
-extension, and the index — is installed by **`/nota:setup`**, which you run once
-after installing. It is done that way because on a new machine that install
-takes longer than the thirty seconds Claude Code allows a server to start in:
-run from a command, it has as long as it needs, and it can tell you what it is
-doing.
+It is done that way because on a new machine that install takes longer than the
+thirty seconds Claude Code allows a server to start in. Run from a command it
+has as long as it needs, and it can tell you what it is doing. The gems go to
+`~/.config/nota/bundle`: your own Ruby is not touched, and they survive plugin
+updates.
 
 Until you run it, `/nota:setup` and `/nota:hello` work and the rest say what is
 missing rather than answering without the knowledge base.

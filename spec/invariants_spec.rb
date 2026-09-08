@@ -391,14 +391,14 @@ RSpec.describe "a platform the server cannot run on" do
     end
   end
 
-  # provide! installs the base group, which is pure Ruby and exists everywhere.
-  # Gating it on unsupported_reason would silence the only thing left able to
-  # speak.
+  # The setup server must start on the platforms this names. It is the only
+  # thing left able to speak there, and what it says is this sentence -- so a
+  # boot that consulted the reason and gave up would silence its own message.
   it "does not stop the setup server from starting there" do
-    source = File.read(File.expand_path("../src/mcp_server/ensure_gems.rb", __dir__))
-    provide = source[/def provide!.*?\n    end/m]
+    boot = File.read(File.expand_path("../src/mcp_server/boot.rb", __dir__))
 
-    expect(provide).not_to include("unsupported_reason")
+    expect(boot).not_to include("unsupported_reason")
+    expect(boot).not_to include("exit")
   end
 
   # The same machine with an x64 Ruby is a supported machine, and nothing must
@@ -500,6 +500,39 @@ end
 RSpec.describe "the setup server" do
   let(:manifest) { YAML.load_file(File.expand_path("../targets/claude-code.yml", __dir__)) }
 
+  # It needs nothing, which is the whole point: anything fetched or loaded
+  # inside the thirty-second connection window is a race this plugin does not
+  # control, and it lost that race twice before the gems left this path.
+  it "starts without Bundler and without a gem" do
+    boot = File.read(File.expand_path("../src/mcp_server/boot.rb", __dir__))
+    server = File.read(File.expand_path("../src/mcp_server/setup_server.rb", __dir__))
+    transport = File.read(File.expand_path("../src/mcp_server/stdio_server.rb", __dir__))
+
+    expect(boot).not_to include("bundler/setup")
+    expect(server).not_to include("MCP::")
+    expect(transport.scan(/^require "([^"]+)"/).flatten).to eq(["json"])
+  end
+
+  # The three tools were registered by the `mcp` gem, which derived their names
+  # from their class names. Those names are now written by hand, and a rename
+  # would silently break every skill and every line of README that calls one.
+  it "keeps the tool names the gem used to derive" do
+    source = File.read(File.expand_path("../src/mcp_server/setup_server.rb", __dir__))
+
+    expect(source.scan(/NAME = "([^"]+)"/).flatten)
+      .to contain_exactly("check_setup_tool", "install_dependencies_tool", "update_knowledge_base_tool")
+  end
+
+  # boot_knowledge.rb loads config before bundler/setup, to name the harness's
+  # own command in the message it prints on the way out. That is only safe while
+  # config.rb requires nothing: a gem required there would raise in the rescue's
+  # place, and the fail-fast path would fail for the wrong reason.
+  it "can name the setup command before Bundler exists" do
+    source = File.read(File.expand_path("../src/mcp_server/config.rb", __dir__))
+
+    expect(source).not_to match(/^require/)
+  end
+
   # The point of the split. If this server ever needs a gem from the index
   # group, it stops being the one that answers when the other cannot, and the
   # reader is back to a timeout that explains nothing.
@@ -519,21 +552,19 @@ RSpec.describe "the setup server" do
     setup = File.read(File.expand_path("../src/mcp_server/setup_server.rb", __dir__))
     knowledge = File.read(File.expand_path("../src/mcp_server/server.rb", __dir__))
 
-    expect(setup).to include("class CheckSetupTool")
+    expect(setup).to include("module CheckSetupTool")
     expect(knowledge).not_to include("CheckSetupTool")
   end
 
-  # Both servers read one Gemfile and differ only in what they leave out, so
-  # there is no second lockfile to drift. The exclusion has to come from the
-  # environment: .bundle/config sits beside the Gemfile and would apply to both.
-  it "differs from the knowledge base only in which groups it excludes" do
-    gemfile = File.read(File.expand_path("../Gemfile", __dir__))
-    expect(gemfile).to match(/group :index do\s+gem "sqlite3"/m)
+  # The gems are one set, installed for one process. Splitting them into groups
+  # was how the old design tried to make a first install fit inside the
+  # connection window; the split no longer means anything, and a distinction
+  # kept past its reason is one more thing that can be reported wrongly.
+  it "asks for one set of gems, not a stage of one" do
+    ensure_gems = File.read(File.expand_path("../src/mcp_server/ensure_gems.rb", __dir__))
 
-    config_writer = File.read(File.expand_path("../src/mcp_server/ensure_gems.rb", __dir__))
-    written = config_writer[/desired = \{[^}]*\}/]
-    expect(written).to include("BUNDLE_PATH")
-    expect(written).not_to include("BUNDLE_WITHOUT")
+    expect(ensure_gems).not_to include("index:")
+    expect(File.read(File.expand_path("../Gemfile", __dir__))).not_to include("group :index")
   end
 end
 

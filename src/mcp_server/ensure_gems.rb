@@ -11,14 +11,16 @@
 # fetches a 9 MB index and a loadable extension without asking, and left seven
 # gems to a line in the README.
 #
-# WHY IN THE SERVER AND NOT IN THE HOOK. The hook can install too — it needs no
-# gems — but the harness starts the server before the hook finishes, so gems that
-# arrive there serve the *next* session and the reader has to reopen. The server
-# is the process that needs them, and a process that installs them before it
-# loads them never has to die: `boot.rb` runs on stdlib alone, calls `provide!`,
-# and only then requires Bundler and the server. The first session is a few
-# seconds slower and works. The hook only reports (`report`), so there is one
-# owner and nothing to race.
+# WHY FROM A TOOL AND NOT FROM A BOOT. Installing while starting up was tried
+# twice, with seven gems and then with six, and both times it raced the thirty
+# seconds the harness allows a server to answer `initialize` in. The race got
+# closer and never ended, because its clock belongs to the machine. So nothing
+# here runs during a boot any more: `install!` is called by a tool, whose budget
+# is hours and whose output the reader actually sees. The setup server reaches
+# that tool needing no gems at all — it speaks the protocol on the standard
+# library, see `stdio_server.rb`.
+#
+# The hook only reports (`report`), so there is one owner and nothing to race.
 #
 # WHERE THEY GO, AND WHY NOT THE OBVIOUS PLACE. Installing into the reader's
 # default GEM_HOME would mutate their Ruby for the sake of one plugin, and on a
@@ -56,11 +58,12 @@ module NotaKnowledgeBase
     # publishes one Windows loadable and it is x86_64. Neither is ours to fix,
     # and no lockfile entry conjures a gem that was never published.
     #
-    # Without this check the reader gets thirty seconds of nothing and then
-    # `CONNECT_TIMEOUT`, which names the symptom and hides every cause. Checked
-    # in two places on purpose: boot.rb so the server stops instead of spending
-    # the connection window failing, and the SessionStart hook because the hook's
-    # output is the only one a reader actually sees.
+    # Read from the setup server, not from a boot. That server starts on every
+    # platform, including the ones named here, which is what makes an answer
+    # possible at all: a machine that cannot run the knowledge base can still
+    # say so, in a tool result the reader sees, instead of spending the
+    # connection window and reporting `CONNECT_TIMEOUT` — a symptom that hides
+    # every cause.
     def unsupported_reason
       return nil unless VecExtension.target.nil?
 
@@ -112,21 +115,17 @@ module NotaKnowledgeBase
 
     # The environment a bundler subprocess runs in.
     #
-    # `index: false` is the setup server's world -- everything but the group
-    # holding sqlite3. `index: true` is the whole thing, which is what the
-    # knowledge base needs and what install! is asked for.
-    def environment(index: true)
-      without = index ? "development" : "development:index"
-
-      { "BUNDLE_GEMFILE" => gemfile, "BUNDLE_WITHOUT" => without }
+    # There is one set of gems, because there is one process that needs them.
+    # The knowledge base server either has them all or has none of them, and no
+    # state in between is worth a name: the setup server, which is what asks
+    # these questions, runs on the standard library and wants none of them.
+    def environment
+      { "BUNDLE_GEMFILE" => gemfile, "BUNDLE_WITHOUT" => "development" }
     end
 
     # Point Bundler at the user directory. Written only when it would change:
     # the file is read on every bundler run, and rewriting it each session would
     # be noise in something a reader may have edited on purpose.
-    # Only BUNDLE_PATH. Which groups to leave out is decided per server and
-    # travels in the environment: this file sits beside the Gemfile, so anything
-    # written here would apply to both servers, and they need different answers.
     def write_bundle_config
       desired = { "BUNDLE_PATH" => bundle_path }
       path = File.join(plugin_root, ".bundle", "config")
@@ -140,60 +139,26 @@ module NotaKnowledgeBase
       false
     end
 
-    # Whether the gems for a given stage are already there.
+    # Whether the gems are already there.
     #
     # Asked of bundler rather than of a marker we wrote: a marker can disagree
     # with the directory, and a half-finished install is exactly the state that
     # has to be told apart from a finished one.
-    def satisfied?(index: true)
-      _out, _err, status = Open3.capture3(environment(index: index), *bundle_command("check"))
+    def satisfied?
+      _out, _err, status = Open3.capture3(environment, *bundle_command("check"))
       status.success?
     rescue StandardError
       false
     end
 
-    # Called by the setup server's boot, before Bundler exists.
-    #
-    # Installs only the base group -- six pure-Ruby gems, about 6 MB -- which is
-    # what this server needs to speak MCP at all. That is the one install still
-    # on the connection's critical path, and it is small and compiles nothing;
-    # everything that made a first install exceed thirty seconds is in the index
-    # group and is installed later, from a tool, where the budget is hours
-    # rather than seconds.
-    #
-    # Not gated on unsupported_reason. A platform with no sqlite3 build can
-    # still run this server, and a server that runs is a server that can say
-    # what is wrong -- which is worth more than refusing to start.
-    #
-    # Everything it says goes to stderr: stdout is the MCP transport.
-    def provide!
-      return true unless installed?
-      return false unless write_bundle_config
-      return true if satisfied?(index: false)
-
-      warn "[Nota] Installing the base dependencies into #{bundle_path} " \
-           "(six gems, about 6 MB; this happens once)."
-
-      ok, output = install!(index: false)
-
-      if ok
-        warn "[Nota] Base dependencies installed."
-      else
-        warn "[Nota] Could not install the base dependencies:"
-        last_lines(output).each { |line| warn "  #{line}" }
-      end
-
-      ok
-    end
-
-    # Installs a stage. Returns [ok, output] so that a caller can show what
-    # happened -- this runs from a tool, whose result the reader actually sees,
-    # unlike the stderr the old design shouted into.
-    def install!(index: true)
+    # Returns [ok, output] so that a caller can show what happened -- this runs
+    # from a tool, whose result the reader actually sees, unlike the stderr the
+    # old design shouted into.
+    def install!
       return [false, "the plugin is not installed (no Gemfile at #{gemfile})"] unless installed?
       return [false, "could not write #{File.join(plugin_root, '.bundle', 'config')}"] unless write_bundle_config
 
-      out, err, status = Open3.capture3(environment(index: index), *bundle_command("install"))
+      out, err, status = Open3.capture3(environment, *bundle_command("install"))
 
       [status.success?, status.success? ? out : err]
     rescue StandardError => e
@@ -205,15 +170,11 @@ module NotaKnowledgeBase
     # the reader can act on, and stays quiet when there is nothing to act on.
     def report
       return nil unless installed?
-      return nil if satisfied?(index: true)
+      return nil if satisfied?
 
-      if satisfied?(index: false)
-        "[Nota] The knowledge base is not installed yet. Run #{Config.cmd_ref('setup')} once " \
-        "to finish setting it up; it takes a few seconds and only happens on a new machine."
-      else
-        "[Nota] Nota is still installing what it needs. Run #{Config.cmd_ref('setup')} to see " \
-        "how far it got and to finish."
-      end
+      "[Nota] The knowledge base is not installed yet. Run #{Config.cmd_ref('setup')} once " \
+      "to finish setting it up; it takes a few seconds and only happens on a new machine."
+
     rescue StandardError
       nil
     end

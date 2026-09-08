@@ -15,12 +15,15 @@
 # one server up and one down, with the one that is up able to explain it, is
 # being told something. A timeout tells them nothing.
 
+require_relative 'config'
+
 begin
   require 'bundler/setup'
 rescue StandardError => e
   warn '[Nota] The knowledge base is not installed yet.'
   warn "  #{e.message.lines.first&.strip}"
-  warn '[Nota] Run /nota:setup — the setup server is running and can finish the installation.'
+  warn "[Nota] Run #{NotaKnowledgeBase::Config.cmd_ref('setup')} — the setup server is running " \
+       'and can finish the installation.'
   exit 1
 end
 

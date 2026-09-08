@@ -3,7 +3,7 @@
 # and emits dist/<harness>/ for each target.
 
 name: nota
-version: "1.1.0"
+version: "1.1.1"
 description: "Nota — MusaDSL composition assistant: learn the framework, code compositions, explore ideas, analyze music"
 author:
   name: Javier Sánchez Yeste

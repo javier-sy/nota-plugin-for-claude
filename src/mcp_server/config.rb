@@ -42,10 +42,11 @@ module NotaKnowledgeBase
     # on Windows), which is why no harness needs to compute this path for us.
     # Where the downloaded knowledge index lives.
     #
-    # Defined here, and only here, because two different processes have to agree
-    # on it and cannot share much else: the MCP server reads it through DB, and
-    # the SessionStart hook writes it through EnsureDB, which runs before Bundler
-    # exists and therefore cannot load anything that needs a gem.
+    # Defined here, and only here, because three processes have to agree on it
+    # and cannot share much else: the knowledge base server reads it through DB,
+    # the setup server writes it through EnsureDB -- on the standard library
+    # alone, so it can do that before a single gem exists -- and `update_index`
+    # writes it as a script.
     #
     # It was duplicated once, one copy was moved into the user directory and the
     # other was not, and for a day the hook downloaded every update into a

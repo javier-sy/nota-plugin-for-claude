@@ -53,8 +53,11 @@ clean:
 ## Test MCP server starts and responds to initialize
 verify-server:
 	@echo '{"jsonrpc":"2.0","method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"test","version":"0.1"}},"id":1}' | \
+		$(RUBY) src/mcp_server/boot.rb 2>&1 | \
+		head -1 | grep -q '"jsonrpc"' && echo "Setup server responds OK" || (echo "Setup server failed to respond" && exit 1)
+	@echo '{"jsonrpc":"2.0","method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"test","version":"0.1"}},"id":1}' | \
 		$(RUBY) src/mcp_server/server.rb 2>&1 | \
-		head -1 | grep -q '"jsonrpc"' && echo "Server responds OK" || (echo "Server failed to respond" && exit 1)
+		head -1 | grep -q '"jsonrpc"' && echo "Knowledge base responds OK" || (echo "Knowledge base failed to respond" && exit 1)
 
 ## Check that the documents Nota reads from musa-dsl are where it says they are
 contract:

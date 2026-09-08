@@ -12,8 +12,8 @@ answer is the failure this plugin exists to prevent.
 
 What to do instead, in this order:
 
-1. Call `check_setup`. It is on the `setup` server, which runs on pure Ruby and
-   answers even when the knowledge base cannot start.
+1. Call `check_setup`. It is on the `setup` server, which needs no dependencies
+   of its own and answers even when the knowledge base cannot start.
 2. Tell the user what it reports, and the step it names — usually running
    `install_dependencies` once, then reloading plugins.
 3. Stop. Do not begin the work this skill was invoked for.

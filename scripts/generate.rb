@@ -137,22 +137,22 @@ def generate_claude_code(manifest, target_config, target_dir)
     mcp_env = target_config["mcp_env"] || {}
     # Two servers, split by what they need to run.
     #
-    # `setup` runs on pure Ruby and always connects, so it can say what is
-    # missing and finish installing it. `knowledge-base` needs sqlite3 and the
-    # index, and exits at once when they are absent rather than holding the
-    # connection open for the thirty seconds Claude Code allows and then being
-    # killed mid-install -- which is what a single server did, and why the
-    # reader got CONNECT_TIMEOUT and no way to ask why.
-    #
-    # They differ only in which bundler groups they exclude and which file they
-    # boot. The exclusion is here, per server, and not in .bundle/config, which
-    # sits beside the Gemfile and would apply to both.
+    # `setup` needs no gems -- it speaks MCP on the standard library -- so it
+    # always connects, and can say what is missing and finish installing it.
+    # `knowledge-base` needs the gems and the index, and exits at once when they
+    # are absent rather than holding the connection open for the thirty seconds
+    # Claude Code allows and then being killed mid-install, which is what a
+    # single server did and why the reader got CONNECT_TIMEOUT with no way to
+    # ask why.
     mcp_json = {
       "mcpServers" => {
         "setup" => {
           "command" => "${NOTA_RUBY:-ruby}",
           "args" => ["#{prefix}mcp_server/boot.rb"],
-          "env" => mcp_env.merge("BUNDLE_WITHOUT" => "development:index"),
+          # No BUNDLE_* here: this server never asks Bundler for anything.
+          # EnsureGems passes what it needs to the bundler subprocess it
+          # spawns, when a tool asks it to install.
+          "env" => mcp_env.reject { |k, _| k.start_with?("BUNDLE_") },
           "cwd" => prefix.sub(%r{/$}, "")
         },
         "knowledge-base" => {
