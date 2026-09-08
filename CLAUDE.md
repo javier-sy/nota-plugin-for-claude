@@ -18,7 +18,7 @@ nota-plugin/                      # source repo (harness-agnostic)
 │   │   ├── boot.rb               #     setup server: needs no gems, so it always connects
 │   │   ├── stdio_server.rb       #     the slice of MCP it speaks, on the stdlib alone
 │   │   ├── setup_server.rb       #     its 3 tools: check, install, update the index
-│   │   ├── boot_knowledge.rb     #     knowledge-base server: fails fast when gems are absent
+│   │   ├── boot_knowledge.rb     #     knowledge-base server: connects with no tools when gems are absent
 │   │   ├── config.rb             #     Config.user_dir / cmd_ref / github_repo (env-driven)
 │   │   ├── server.rb             #     the knowledge base's 22 tool definitions
 │   │   ├── search.rb             #     Dual-DB semantic search
@@ -62,8 +62,9 @@ The MCP server is harness-agnostic: `src/mcp_server/config.rb` reads `NOTA_USER_
 library -- so it always connects, on any machine, in any state. It owns
 `check_setup`, `install_dependencies` and `update_knowledge_base`.
 `knowledge-base` needs the gems, the sqlite-vec loadable and the index, and when
-they are missing it exits in under 100 ms naming what it wants, instead of
-holding the connection open until the harness kills it.
+they are missing it connects anyway with an empty tool list. It must not fail:
+a failed connection is cached and blocks the server for fifteen minutes, in new
+processes too — see below.
 
 **Neither server's command is `-r bundler/setup`.** `setup` boots through
 `mcp_server/boot.rb`, which requires no gem at all, so there is nothing Bundler
@@ -113,10 +114,25 @@ text mentions a reload without saying it is not enough. **For us**: iterating on
 `server.rb`, `db.rb` or `search.rb` and checking with `/reload-plugins` tests the
 previous version. Reopen the process.
 
-This also settles what the fail-fast in `boot_knowledge.rb` costs: nothing. The
-worry was that a server exiting in 90 ms gets written off for the session while
-one that hangs for 30 s would eventually connect. Neither reconnects — the one
-that hangs simply dies later and with a worse message.
+**A failed connection is cached for fifteen minutes, in new processes too, and
+that is why `boot_knowledge.rb` must not fail.** Measured 2026-09-08:
+`~/.claude/mcp-needs-auth-cache.json` gets `{"plugin:nota:knowledge-base":
+{"timestamp": …}}`, and until it expires the harness does not launch the server
+at all — the process never exists. Restarting does not clear it.
+
+That window is the path every install takes, not an edge of it: the failure
+happens while installing, because the gems are not there yet; installing them
+takes about 90 s; and the reader restarts as soon as that finishes. One test
+restart landed **nine seconds** inside the window. So the server connects with an
+empty tool list instead of exiting, and there is no failure to cache. The model
+gates on whether the tools are there, not on whether the server is, so the
+skills refuse exactly as before.
+
+Two things about that cache, if it ever has to be diagnosed. Its entry is **not
+removed on expiry**, only made stale, so its presence proves nothing — compare
+the timestamp. And it is named `mcp-needs-auth-cache.json`, the OAuth cache: a
+plain `exit 1` is filed there too, which may be why the only escape it offers is
+"edit the plugin config to retry now".
 
 **Nothing large may happen inside the connection handshake, and this was
 learned twice.** The harness gives a server 30 s to answer `initialize`.

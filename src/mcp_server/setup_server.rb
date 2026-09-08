@@ -21,10 +21,11 @@
 #
 # The other server, `knowledge-base`, needs sqlite3 and the index, and keeps
 # using the `mcp` gem: by the time it runs, the gems are there, which is exactly
-# what it needed established. When they are missing it exits in under a hundred
-# milliseconds with a line naming what it wants, instead of holding the
-# connection open until it is killed. A reader then sees one server up and one
-# down, which is a truthful picture, and the one that is up can explain it.
+# what it needed established. When they are missing it connects anyway, with an
+# empty tool list, because a connection that fails is cached by the harness and
+# blocks the next fifteen minutes -- see `boot_knowledge.rb`. Either way the
+# model sees no knowledge base tools, the skills refuse, and this server is what
+# explains why.
 #
 # WHAT DECIDES THE STATE. Nothing here records a stage. Every answer is read
 # from the disk at the moment it is asked -- is the bundle complete, is the
@@ -102,7 +103,7 @@ module NotaKnowledgeBase
     DESCRIPTION =
       "Report what Nota still needs before the knowledge base can answer: the API key, " \
       "the Ruby dependencies, the sqlite-vec extension and the index itself. Reads the " \
-      "installation from disk, so it works when the knowledge base server is not running — " \
+      "installation from disk, so it works when the knowledge base has no tools to offer — " \
       "which is when it is most needed."
 
     module_function
@@ -311,7 +312,7 @@ module NotaKnowledgeBase
       instructions:
         "Nota's setup server. Reports what the plugin still needs and installs it. " \
         "It runs on the standard library alone, so it answers even when the knowledge " \
-        "base server cannot start — which is exactly when its answers matter.",
+        "base has nothing to offer — which is exactly when its answers matter.",
       tools: TOOLS.map { |tool| StdioServer::Tool.new(tool::NAME, tool::DESCRIPTION, tool.method(:call)) }
     )
   end

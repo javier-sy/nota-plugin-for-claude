@@ -11,7 +11,7 @@ nothing — and telling the two apart afterwards is not possible. Producing that
 answer is the failure this plugin exists to prevent.
 
 What to do instead: call `check_setup` — it is on the `setup` server and answers
-even when the knowledge base cannot start — then tell the user what is missing
+even when the knowledge base has no tools — then tell the user what is missing
 and the one step that fixes it, and stop. Do not begin the work this skill was
 invoked for.
 

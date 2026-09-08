@@ -16,6 +16,7 @@
 # is tools/retrieval-battery.rb; whether the assistant's decisions change is the
 # commissions protocol, and that is deferred.
 
+require "open3"
 require "tmpdir"
 require "fileutils"
 require "yaml"
@@ -676,5 +677,53 @@ RSpec.describe "the next step check_setup names" do
     expect(mentions).not_to be_empty, "the invariant stopped seeing the text it guards"
     expect(mentions).to all(match(/does not|not enough|not by reloading/)),
                        "a reload is mentioned without saying it will not start the server"
+  end
+end
+
+# The knowledge base server must not fail to connect.
+#
+# Measured on Windows, 2026-09-08: a failed connection is written to
+# ~/.claude/mcp-needs-auth-cache.json and, until it expires fifteen minutes
+# later, the harness does not launch the server at all -- in a new process
+# either. That window is the path every install takes, and one test restart
+# landed nine seconds inside it. So when the gems are missing this connects with
+# an empty tool list rather than exiting: no failure, nothing to cache.
+RSpec.describe "the knowledge base server with no gems" do
+  let(:answer) do
+    boot = File.expand_path("../src/mcp_server/boot_knowledge.rb", __dir__)
+    hello = {
+      jsonrpc: "2.0", id: 1, method: "initialize",
+      params: { protocolVersion: "2025-06-18", capabilities: {}, clientInfo: { name: "s", version: "1" } }
+    }
+    listing = { jsonrpc: "2.0", id: 2, method: "tools/list" }
+
+    # The suite runs under `bundle exec`, which exports three things that would
+    # each load Bundler before the script does, raising outside the rescue this
+    # is testing. BUNDLER_SETUP is the one that is easy to miss: rubygems.rb
+    # ends with `require ENV["BUNDLER_SETUP"] if ENV["BUNDLER_SETUP"]`, so it
+    # fires from gem_prelude, before line one of any script.
+    out, _err, status = Open3.capture3(
+      { "BUNDLE_PATH" => "/nonexistent-so-bundler-finds-nothing",
+        "RUBYOPT" => nil, "BUNDLE_GEMFILE" => nil, "BUNDLER_SETUP" => nil },
+      RbConfig.ruby, boot,
+      stdin_data: "#{JSON.generate(hello)}\n#{JSON.generate(listing)}\n"
+    )
+
+    [out.lines.map { |line| JSON.parse(line) }, status]
+  end
+
+  it "connects instead of exiting" do
+    messages, status = answer
+
+    expect(status).to be_success
+    expect(messages.first.dig("result", "serverInfo", "name")).to eq("musadsl-kb")
+  end
+
+  # The skills gate on whether the tools are there, not on whether the server
+  # is, so an empty server refuses exactly as a dead one did.
+  it "offers no tools, which is what makes the skills refuse" do
+    messages, _status = answer
+
+    expect(messages.last.dig("result", "tools")).to eq([])
   end
 end

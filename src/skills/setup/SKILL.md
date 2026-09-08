@@ -42,17 +42,17 @@ Explain to the user:
 
 ### If the knowledge base is NOT DOWNLOADED YET
 
-This is not a fault and needs no remedy. The index is fetched the first time
-anything asks the knowledge base a question, so the way to trigger it is to use
-it — ask about any MusaDSL subsystem and it will download before answering.
+`install_dependencies` fetches it, along with anything else that is missing, and
+is safe to run again when the index is the only thing left. Say that.
 
-Say that, rather than suggesting a restart. Restarting happens to work, because
-the SessionStart hook also downloads it, but it is the most expensive way to get
-there and it is not what fixes it.
+A question would also get there — `search` downloads the index on demand — but it
+makes the reader wait for 19 MB inside their own question, which is the wait that
+moving the download into the tool removed. Do not suggest a restart: nothing
+downloads the index at startup.
 
 Worth knowing if the download itself is failing:
 
-- it comes from GitHub Releases, 9 MB compressed and 27 MB on disk;
+- it comes from GitHub Releases, 9.5 MB compressed and 19 MB on disk;
 - it lands in the user directory the report names, not inside the plugin, so a
   plugin update does not lose it;
 - a failure there is a network or proxy problem, and the server says so on
