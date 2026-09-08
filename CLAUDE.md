@@ -94,6 +94,16 @@ do reload; server processes do not. The harness's "2 plugin MCP servers" line is
 a count of what is declared, not of what was relaunched — that message is what
 made two of us believe otherwise.
 
+The same fact from the other side: **uninstalling the plugin does not stop its
+servers either**. Observed 2026-09-08, three ruby processes still serving a
+plugin that no longer existed, started by the session that was open and outliving
+both the uninstall and the marketplace removal. It matters for one job in
+particular — a clean reinstall — because `boot_knowledge.rb` holds `knowledge.db`
+open, and Windows will not delete an open file. So wiping `~/.config/nota` fails
+on that one file, and fails **quietly** if nobody reads the result. Close the
+session before the `rm`, or kill the processes **by PID**: `taskkill /IM
+ruby.exe` once took out the tester's own MCP server mid-session.
+
 Two consequences. **For the reader**: the session that installs the dependencies
 is never the session that can use them, so every message that used to say
 "reload plugins" now says to restart, naming `claude --continue` because
