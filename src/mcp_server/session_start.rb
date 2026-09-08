@@ -32,7 +32,8 @@ rescue StandardError
 end
 
 begin
-  NotaKnowledgeBase::EnsureDB.run
+  updated = NotaKnowledgeBase::EnsureDB.run
+  puts "[Nota] Knowledge base updated to #{updated}." if updated
 rescue StandardError
   # Graceful degradation: an index that could not be refreshed is still an index.
 end

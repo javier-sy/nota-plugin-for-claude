@@ -33,15 +33,7 @@ module NotaKnowledgeBase
     module_function
 
     def default_db_path
-      env_path = Config.env("KNOWLEDGE_DB_PATH")
-      return env_path if env_path
-
-      plugin_root = Config.env("CLAUDE_PLUGIN_ROOT")
-      if plugin_root
-        File.join(plugin_root, "mcp_server", "knowledge.db")
-      else
-        File.join(__dir__, "knowledge.db")
-      end
+      Config.knowledge_db_path
     end
 
     def should_check?(db_path)
@@ -165,8 +157,10 @@ module NotaKnowledgeBase
         return
       end
 
-      # Download and update
-      download_and_replace(asset_url, db_path, tag)
+      # Download and update. The tag comes back so that a caller can say what
+      # happened: this ran silently for a day writing a perfectly good index into
+      # a directory nobody read, and silence is what made that survive a day.
+      tag if download_and_replace(asset_url, db_path, tag)
     end
   end
 end

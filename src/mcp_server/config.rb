@@ -40,6 +40,27 @@ module NotaKnowledgeBase
     # Where the user's own material lives. Ruby resolves the home directory on
     # every platform it runs on (HOME, then HOMEDRIVE+HOMEPATH, then USERPROFILE
     # on Windows), which is why no harness needs to compute this path for us.
+    # Where the downloaded knowledge index lives.
+    #
+    # Defined here, and only here, because two different processes have to agree
+    # on it and cannot share much else: the MCP server reads it through DB, and
+    # the SessionStart hook writes it through EnsureDB, which runs before Bundler
+    # exists and therefore cannot load anything that needs a gem.
+    #
+    # It was duplicated once, one copy was moved into the user directory and the
+    # other was not, and for a day the hook downloaded every update into a
+    # directory nobody read. The download reported success, because it had
+    # succeeded -- somewhere else.
+    #
+    # Under the user directory rather than the plugin's: a plugin install is
+    # versioned, so anything cached inside it is discarded on the next update.
+    def knowledge_db_path
+      env_path = env("KNOWLEDGE_DB_PATH")
+      return env_path if env_path
+
+      File.join(user_dir, "knowledge.db")
+    end
+
     def user_dir
       dir = env("NOTA_USER_DIR")
       return dir if dir && !dir.empty?

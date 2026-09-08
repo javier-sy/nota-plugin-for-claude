@@ -422,6 +422,32 @@ RSpec.describe "where the downloaded index lives" do
     expect(path).not_to include(File.expand_path("../src/mcp_server", __dir__))
   end
 
+  # The bug this pins. Two processes have to agree on where the index is: the
+  # server reads it, and the SessionStart hook downloads it. They cannot share
+  # code freely -- the hook runs before Bundler, so it cannot load anything
+  # needing a gem -- and the path was therefore written twice. When it moved into
+  # the user directory, one copy moved and the other did not, and for a day every
+  # update was downloaded into a directory nobody read. Nothing failed: the
+  # download succeeded, somewhere else.
+  it "is the same path the downloader writes to" do
+    require_relative "../src/mcp_server/ensure_db"
+
+    expect(NotaKnowledgeBase::EnsureDB.default_db_path)
+      .to eq(NotaKnowledgeBase::DB.default_db_path)
+  end
+
+  # And the constraint that made them separate in the first place. If ensure_db
+  # ever reaches for db.rb to share the path, it pulls in sqlite3, and the hook
+  # dies on any machine that has not installed the gems yet -- which is exactly
+  # the machine that needs the hook to work.
+  it "is reachable by the hook without loading a gem" do
+    source = File.read(File.expand_path("../src/mcp_server/ensure_db.rb", __dir__))
+    requires = source.scan(/^\s*require(?:_relative)?\s+["']([^"']+)["']/).flatten
+
+    expect(requires).to all(satisfy { |r| %w[config].include?(r) || !r.include?("db") })
+    expect(requires).not_to include("sqlite3")
+  end
+
   # The version marker and the check stamp are derived from the index's own path
   # by EnsureDB, so moving the index moves them. Were they to part company, the
   # index would be permanently either stale or re-downloaded.
