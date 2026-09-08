@@ -41,6 +41,28 @@ require_relative "ensure_db"
 require_relative "vec_extension"
 
 module NotaKnowledgeBase
+  # What to tell the reader when a server has to be picked up.
+  #
+  # NOT "reload plugins", which is what this said everywhere until it was
+  # measured on Windows on 2026-09-08: neither `/reload-plugins` nor
+  # `/reload-plugins --force` restarts an MCP server. Both reload skills, hooks
+  # and agents, and the "2 plugin MCP servers" they report is a count of what is
+  # declared, not of what was relaunched -- the running process kept the same
+  # start time across both. So a session that installed the gems is a session
+  # that cannot use them, and the only way out is a new process.
+  #
+  # Written for Claude Code by name, not for "your coding agent". Reloading
+  # plugins is a Claude Code concept and `claude --continue` is its command;
+  # opencode is the only other target and its channel is on hold, so nobody
+  # knows what either sentence would be there. Naming a harness we do not ship
+  # to would be inventing its behaviour. Listed in CLAUDE.md among the things to
+  # revisit if that channel comes back.
+  #
+  # `claude --continue` is named because it is what makes this acceptable
+  # advice: "restart" reads as "lose your conversation", and it does not.
+  RESTART = "start a new Claude Code session — reloading plugins does not start the knowledge " \
+            "base server. `claude --continue` comes back to this conversation."
+
   # What the installation looks like right now, read from disk.
   #
   # Shared by the tools below so that the report and the installer cannot
@@ -67,11 +89,6 @@ module NotaKnowledgeBase
 
       version = File.read("#{path}.version").strip rescue nil
       version ? "present (#{version})" : "present"
-    end
-
-    # Everything the knowledge base needs before it can answer anything.
-    def ready?
-      gems == :present && loadable == :present && index != :missing
     end
   end
 
@@ -136,16 +153,54 @@ module NotaKnowledgeBase
     # One sentence naming the next action, because a list of states is not an
     # instruction and the reader of this is usually someone who just installed
     # the plugin and does not know whether they are at fault.
+    #
+    # It names what is missing rather than always saying the same thing. The old
+    # text said "run install_dependencies ... it takes a few seconds on a new
+    # machine" in every unfinished state, including the one right after a
+    # successful install -- so it described a situation the reader had just left,
+    # and told them to repeat the step they had just run. That reads as if
+    # nothing had happened. Reported from a clean Windows install, 2026-09-08.
+    #
+    # The unsupported guard is not conditioned on the gems any more: the reason
+    # is that VecExtension has no build for this platform, and no state of the
+    # bundle changes that.
     def next_step(state)
-      return "Everything is in place. Reload plugins if the knowledge base is not connected yet." if state.ready?
-
-      if state.gems == :missing && EnsureGems.unsupported_reason
+      if EnsureGems.unsupported_reason
         return "This machine cannot run the knowledge base as configured; see above. " \
                "Everything else — linting, the documentation in context — keeps working."
       end
 
-      "**Next:** run `install_dependencies` to finish setting up. It takes a few seconds on a " \
-      "new machine and happens once. Then reload plugins so the knowledge base server starts."
+      missing = []
+      missing << "the Ruby dependencies" if state.gems == :missing
+      missing << "the sqlite-vec extension" if state.loadable == :missing
+      missing << "the knowledge index" if state.index == :missing
+
+      return settled(state) if missing.empty?
+
+      # The timing is reassurance for someone installing from scratch. Said to
+      # someone who is only missing the index, it is just wrong.
+      pace = state.gems == :missing ? " On a new machine that takes a few seconds, and happens once." : ""
+
+      "**Next:** run `install_dependencies` — it fetches #{listed(missing)}.#{pace} " \
+      "Then #{RESTART}"
+    end
+
+    # Nothing left to fetch. The key is the one thing this plugin cannot install
+    # for the reader, so it is the only thing that can still be in the way.
+    def settled(state)
+      if state.api_key == :missing
+        return "**Next:** set VOYAGE_API_KEY and start Claude Code from a terminal that has it. " \
+               "Everything else is in place."
+      end
+
+      "Everything is in place. If its tools are still not there, #{RESTART}"
+    end
+
+    # "a", "a and b", "a, b and c".
+    def listed(items)
+      return items.first if items.size == 1
+
+      "#{items[0..-2].join(', ')} and #{items.last}"
     end
   end
 
@@ -154,9 +209,10 @@ module NotaKnowledgeBase
     NAME = "install_dependencies_tool"
 
     DESCRIPTION =
-      "Finish setting Nota up: install the Ruby gems the knowledge base needs and fetch the " \
-      "sqlite-vec extension. Safe to run more than once — it installs only what is missing. " \
-      "The knowledge base server needs a plugin reload afterwards to pick them up."
+      "Finish setting Nota up: install the Ruby gems the knowledge base needs, fetch the " \
+      "sqlite-vec extension, and download the knowledge index. Safe to run more than once — " \
+      "it fetches only what is missing. The knowledge base server is picked up by a new " \
+      "Claude Code session afterwards, not by reloading plugins."
 
     module_function
 
@@ -182,11 +238,40 @@ module NotaKnowledgeBase
         return failed("fetching the sqlite-vec extension", e.message)
       end
 
+      done << index_line
+
       done << ""
-      done << "**Now reload plugins** so the knowledge base server starts. The index itself " \
-              "downloads on the first question you ask it."
+      done << "**Now** #{RESTART}"
 
       done.join("\n")
+    end
+
+    # The index is the fourth thing check_setup reports, and a tool that calls
+    # itself "finish setting Nota up" while leaving one of the four undone is
+    # lying about what it did. It was left out for a reason that has expired:
+    # the download used to sit inside the knowledge base server's `initialize`,
+    # where the thirty-second window made it impossible. From here the budget is
+    # hours, and EnsureDB needs no gem to do it.
+    #
+    # A failed download does NOT fail this tool. The gems and the extension are
+    # installed by then, and that work is not thrown away because a network
+    # dropped -- `search` fetches the index on demand anyway, so the retry is
+    # already built and the honest thing is to say so.
+    def index_line
+      before = File.exist?(Config.knowledge_db_path)
+      updated = EnsureDB.run(force: true)
+
+      if updated
+        "- Knowledge index: downloaded (#{updated})"
+      elsif before || File.exist?(Config.knowledge_db_path)
+        "- Knowledge index: already current"
+      else
+        "- Knowledge index: NOT downloaded — no release was reachable. It will be fetched " \
+        "with your first question."
+      end
+    rescue StandardError => e
+      "- Knowledge index: NOT downloaded (#{e.class}: #{e.message}). It will be fetched " \
+      "with your first question."
     end
 
     def failed(what, output)
@@ -210,7 +295,7 @@ module NotaKnowledgeBase
 
       if updated
         "Knowledge index updated to #{updated}, at `#{Config.knowledge_db_path}`. " \
-        "Reload plugins, or start a new session, for the knowledge base to read it."
+        "The next question you ask reads it; nothing needs restarting."
       else
         "The knowledge index is already current."
       end

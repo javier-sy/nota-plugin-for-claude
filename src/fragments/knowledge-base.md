@@ -10,13 +10,15 @@ the index reads exactly like one built with it — fluent, plausible, sourced fr
 nothing — and telling the two apart afterwards is not possible. Producing that
 answer is the failure this plugin exists to prevent.
 
-What to do instead, in this order:
+What to do instead: call `check_setup` — it is on the `setup` server and answers
+even when the knowledge base cannot start — then tell the user what is missing
+and the one step that fixes it, and stop. Do not begin the work this skill was
+invoked for.
 
-1. Call `check_setup`. It is on the `setup` server, which needs no dependencies
-   of its own and answers even when the knowledge base cannot start.
-2. Tell the user what it reports, and the step it names — usually running
-   `install_dependencies` once, then reloading plugins.
-3. Stop. Do not begin the work this skill was invoked for.
-
-The user has asked for something this skill cannot do yet. Saying so, with the
-remedy, is the whole of the correct response.
+**Say it in a few lines.** Everything above is the reason *you* must stop, and
+none of it is the user's business. They asked about music and got an
+installation notice instead; that is already an interruption, and explaining it
+at length makes it a worse one. So: do not name which server owns which tool, do
+not argue why an unsourced answer would be bad, do not describe how the plugin
+is built. Report what is missing, name the step, offer to run
+`install_dependencies` for them, and be done.

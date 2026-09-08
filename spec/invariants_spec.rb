@@ -603,3 +603,78 @@ RSpec.describe "skills that need the knowledge base" do
     expect(fragment).to match(/do not|Do not/i)
   end
 end
+
+# What check_setup tells the reader to do next.
+#
+# It used to say the same sentence in every unfinished state -- "run
+# install_dependencies ... it takes a few seconds on a new machine" -- which,
+# said to someone who had just run it and was only missing the index, told them
+# to repeat a step and described a machine they were no longer on. Reported from
+# a clean Windows install on 2026-09-08.
+RSpec.describe "the next step check_setup names" do
+  before { require_relative "../src/mcp_server/setup_server" }
+
+  def state(gems: :present, loadable: :present, index: "present", api_key: :present)
+    double(gems: gems, loadable: loadable, index: index, api_key: api_key)
+  end
+
+  def next_step(**overrides)
+    NotaKnowledgeBase::CheckSetupTool.next_step(state(**overrides))
+  end
+
+  it "names the one thing that is missing, and nothing else" do
+    answer = next_step(index: :missing)
+
+    expect(answer).to include("it fetches the knowledge index.")
+    expect(answer).not_to include("Ruby dependencies")
+    expect(answer).not_to include("sqlite-vec")
+  end
+
+  # The reassurance is for someone installing from scratch. To someone who has
+  # already installed, it is simply false.
+  it "promises a few seconds only when the gems are the thing missing" do
+    expect(next_step(gems: :missing, loadable: :missing, index: :missing)).to include("a few seconds")
+    expect(next_step(index: :missing)).not_to include("a few seconds")
+  end
+
+  it "lists several as a sentence, not as a dump" do
+    expect(next_step(loadable: :missing, index: :missing))
+      .to include("it fetches the sqlite-vec extension and the knowledge index.")
+
+    expect(next_step(gems: :missing, loadable: :missing, index: :missing))
+      .to include("it fetches the Ruby dependencies, the sqlite-vec extension and the knowledge index.")
+  end
+
+  # install_dependencies cannot fetch a key, so a report that says everything is
+  # in place while its own first row says the key is missing contradicts itself.
+  it "asks for the key when that is all that is left" do
+    answer = next_step(api_key: :missing)
+
+    expect(answer).to include("VOYAGE_API_KEY")
+    expect(answer).not_to include("install_dependencies")
+  end
+
+  it "says so when there is nothing left" do
+    expect(next_step).to start_with("Everything is in place.")
+  end
+
+  # Measured on Windows, 2026-09-08: neither `/reload-plugins` nor
+  # `/reload-plugins --force` restarts an MCP server. They reload skills, hooks
+  # and agents; the server process kept the same start time across both. So the
+  # session that installs the gems is the session that cannot use them, and
+  # every place that said "reload plugins" was sending the reader nowhere.
+  it "never tells the reader that reloading plugins will start a server" do
+    said = [
+      NotaKnowledgeBase::RESTART,
+      next_step(index: :missing),
+      next_step,
+      NotaKnowledgeBase::InstallDependenciesTool::DESCRIPTION
+    ]
+
+    mentions = said.grep(/eload(?:ing|s)? plugins/)
+
+    expect(mentions).not_to be_empty, "the invariant stopped seeing the text it guards"
+    expect(mentions).to all(match(/does not|not enough|not by reloading/)),
+                       "a reload is mentioned without saying it will not start the server"
+  end
+end

@@ -30,11 +30,10 @@ x64 Ruby under emulation; rather than putting it first on PATH, point Nota at it
 [Environment]::SetEnvironmentVariable('NOTA_RUBY', 'C:\Ruby34-x64\bin\ruby.exe', 'User')
 ```
 
-Nota installs in two steps, and the second one is a command you run.
-
 Installing the plugin downloads nothing and installs nothing. Everything the
 knowledge base needs — the Ruby gems, the `sqlite-vec` SQLite extension, and the
-index itself — is installed by **`/nota:setup`**, which you run once afterwards.
+index itself — is installed by **`/nota:setup`**, which you run once afterwards,
+and it takes a new session to pick it up.
 
 It is done that way because on a new machine that install takes longer than the
 thirty seconds Claude Code allows a server to start in. Run from a command it
@@ -69,8 +68,13 @@ Then, in a session that has the key:
 /nota:setup
 ```
 
-It reports what is still missing and installs it. Reload plugins when it is
-done, and the index downloads itself the first time you ask a question.
+It reports what is still missing and installs it — the gems, the sqlite-vec
+extension and the index. Then `/exit` and `claude --continue`, which comes back
+to the same conversation, and everything is ready. Reloading plugins does not
+start the server.
+
+(That is Claude Code's wording. The opencode channel is on hold and its
+equivalent is unknown.)
 
 ## Skills
 
@@ -279,7 +283,7 @@ nota/
 │   ├── db.rb                # sqlite-vec database management
 │   ├── ensure_db.rb         # Auto-download knowledge.db from releases
 │   └── knowledge.db         # Public knowledge base (auto-downloaded)
-├── hooks/                   # Session lifecycle hooks (auto-download on start)
+├── hooks/                   # Session lifecycle hooks (musa-dsl docs into context)
 ├── .mcp.json                # MCP server configuration
 ├── Gemfile                  # Ruby dependencies
 ├── Makefile                 # Build targets (for maintainers)

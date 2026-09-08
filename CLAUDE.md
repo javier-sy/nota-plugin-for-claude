@@ -86,6 +86,28 @@ Their states differ, and it matters for what to do about it. `sqlite3-ruby` has 
 
 **The MCP command is `${NOTA_RUBY:-ruby}`**, in `.mcp.json`, `hooks.json` and the opencode template. `${VAR}` expands in `command` and `args`, not only `env`.
 
+**Reloading plugins does not restart an MCP server, and this changes how you
+test.** Measured on Windows, 2026-09-08, with a probe writing its start time from
+`boot_knowledge.rb`: the timestamp was identical before the reload, after
+`/reload-plugins`, and after `/reload-plugins --force`. Skills, hooks and agents
+do reload; server processes do not. The harness's "2 plugin MCP servers" line is
+a count of what is declared, not of what was relaunched — that message is what
+made two of us believe otherwise.
+
+Two consequences. **For the reader**: the session that installs the dependencies
+is never the session that can use them, so every message that used to say
+"reload plugins" now says to restart, naming `claude --continue` because
+"restart" otherwise reads as "lose your conversation". `NotaKnowledgeBase::RESTART`
+is the single place that sentence lives, and `spec/` fails if any user-facing
+text mentions a reload without saying it is not enough. **For us**: iterating on
+`server.rb`, `db.rb` or `search.rb` and checking with `/reload-plugins` tests the
+previous version. Reopen the process.
+
+This also settles what the fail-fast in `boot_knowledge.rb` costs: nothing. The
+worry was that a server exiting in 90 ms gets written off for the session while
+one that hangs for 30 s would eventually connect. Neither reconnects — the one
+that hangs simply dies later and with a worse message.
+
 **Nothing large may happen inside the connection handshake, and this was
 learned twice.** The harness gives a server 30 s to answer `initialize`.
 `run_server` used to download knowledge.db there; that moved out. Then a clean
@@ -256,7 +278,7 @@ export VOYAGE_API_KEY=<your-key>
 **Trigger knowledge.db release** — either:
 - The CI workflow triggers automatically if `src/mcp_server/chunker.rb` or `src/mcp_server/embeddings.rb` changed
 - Otherwise, manually trigger via GitHub Actions → "Build and Release Knowledge DB" → "Run workflow"
-- Users auto-download the new knowledge.db on their next session (checked every 24h)
+- Users get the new knowledge.db from `update_knowledge_base`, or on their next search (checked every 24h). The first copy arrives with `install_dependencies`, not lazily.
 
 **Manual npm publish (rare — e.g. reserving a new package name)** — only if you ever publish to npm by hand instead of via CI:
 - Use `npm publish --access public ./dist/opencode` (with the `./` prefix). A bare `dist/opencode` is parsed by pacote as a GitHub shorthand `github:dist/opencode` → spurious `git ls-remote` → 403.
@@ -294,6 +316,13 @@ To turn it back on, in this order:
    the first time, then let CI take over.
 3. Flip `PUBLISH_OPENCODE` to `'true'`.
 4. `npm deprecate nota-plugin-for-opencode "renamed to @yeste-studio/nota"`.
+5. Revisit every user-facing sentence that names Claude Code. `NotaKnowledgeBase::RESTART`
+   and the tool descriptions around it say "start a new Claude Code session" and
+   "reloading plugins", both of which are that harness's concepts and neither of
+   which is known to mean anything in opencode. They were written that way on
+   purpose: a sentence hedged into "your coding agent" would have been inventing
+   behaviour for a target nobody has run. Whoever turns the channel back on has
+   to find out what the equivalent is, not generalise the wording.
 
 One caveat worth knowing before flipping it: the Claude Code channel publishes
 **before** npm, so a failing `npm publish` leaves Claude Code ahead — exactly the
