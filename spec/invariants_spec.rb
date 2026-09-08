@@ -727,3 +727,40 @@ RSpec.describe "the knowledge base server with no gems" do
     expect(messages.last.dig("result", "tools")).to eq([])
   end
 end
+
+# The two versions check_setup reports.
+#
+# They are there because this is the tool someone runs when something is wrong,
+# and a report of what is missing is not a bug report until it says which Nota
+# and which musa-dsl. Both have to be readable on a machine with no gems, which
+# is the state this server exists to describe.
+RSpec.describe "the versions in the setup report" do
+  before { require_relative "../src/mcp_server/setup_server" }
+
+  # Read from the file the generator writes, not from a constant that could
+  # disagree with the plugin actually running.
+  it "reports the plugin version from the installed tree" do
+    version = File.read(File.expand_path("../dist/claude-code/VERSION", __dir__)).strip
+
+    expect(version).to eq(File.read(File.expand_path("../VERSION", __dir__)).strip)
+  end
+
+  # musa_docs.rb finds the gem by scanning specification directories, on
+  # rubygems and fileutils alone. If it ever needs a gem, the setup server stops
+  # being able to answer on the machine where the answer matters.
+  it "reads musa-dsl without needing a gem" do
+    source = File.read(File.expand_path("../src/mcp_server/musa_docs.rb", __dir__))
+    requires = source.scan(/^\s*require\s+["']([^"']+)["']/).flatten
+
+    expect(requires).to contain_exactly("rubygems", "fileutils")
+  end
+
+  # Neither is allowed to take the report down: a missing musa-dsl is the normal
+  # state for someone who has just installed Nota and not yet the framework.
+  it "says so rather than failing when musa-dsl is absent" do
+    allow(NotaKnowledgeBase::MusaDocs).to receive(:version).and_raise(StandardError, "boom")
+
+    expect(NotaKnowledgeBase::SetupState.musa_dsl_version).to be_nil
+    expect(NotaKnowledgeBase::CheckSetupTool.call).to include("musa-dsl**: not installed")
+  end
+end

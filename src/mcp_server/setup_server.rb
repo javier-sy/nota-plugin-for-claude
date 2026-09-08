@@ -71,6 +71,27 @@ module NotaKnowledgeBase
   module SetupState
     module_function
 
+    # Which Nota this is. Read from the file the generator writes beside
+    # mcp_server/, so it is the version actually running rather than one this
+    # code was told about. Absent in a source checkout, which has no VERSION at
+    # that level -- the same coincidence of layout that keeps EnsureGems out of
+    # a developer's tree.
+    def plugin_version
+      path = File.join(EnsureGems.plugin_root, "VERSION")
+      File.exist?(path) ? File.read(path).strip : nil
+    end
+
+    # And which musa-dsl the reader has, which is not ours to choose: Nota does
+    # not depend on the framework, it reads whichever copy is installed. Asked
+    # here because the two versions together are what a bug report needs, and
+    # this is the tool someone runs when something is wrong.
+    def musa_dsl_version
+      require_relative "musa_docs"
+      MusaDocs.version&.to_s
+    rescue StandardError
+      nil
+    end
+
     def api_key
       raw = Config.env("VOYAGE_API_KEY")
       raw.nil? || raw.empty? ? :missing : :present
@@ -112,6 +133,8 @@ module NotaKnowledgeBase
       s = SetupState
       lines = ["## Nota setup", ""]
 
+      lines << "- **Nota**: #{s.plugin_version || 'unknown (running from a source tree)'}"
+      lines << "- **musa-dsl**: #{s.musa_dsl_version || 'not installed — Nota reads the copy you install for your own work'}"
       lines << "- **Voyage API key**: #{api_key_line(s.api_key)}"
       lines << "- **Ruby dependencies**: #{gems_line(s.gems)}"
       lines << "- **sqlite-vec extension**: #{loadable_line(s.loadable)}"
