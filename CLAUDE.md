@@ -128,9 +128,12 @@ empty tool list instead of exiting, and there is no failure to cache. The model
 gates on whether the tools are there, not on whether the server is, so the
 skills refuse exactly as before.
 
-Two things about that cache, if it ever has to be diagnosed. Its entry is **not
-removed on expiry**, only made stale, so its presence proves nothing — compare
-the timestamp. And it is named `mcp-needs-auth-cache.json`, the OAuth cache: a
+Two things about that cache, if it ever has to be diagnosed. **Its entry outlives
+both the expiry and a successful reconnection** — seen still present, unchanged,
+after the server had connected again with all its tools — and it was gone later
+in the same session, with nothing known to have cleared it. So the entry's
+presence proves nothing about whether a block is active, and its absence proves
+nothing about whether one happened: only the timestamp says anything. And it is named `mcp-needs-auth-cache.json`, the OAuth cache: a
 plain `exit 1` is filed there too, which may be why the only escape it offers is
 "edit the plugin config to retry now".
 
