@@ -128,6 +128,15 @@ empty tool list instead of exiting, and there is no failure to cache. The model
 gates on whether the tools are there, not on whether the server is, so the
 skills refuse exactly as before.
 
+Confirmed on a clean Windows install of 1.1.3: a restart **2.8 minutes** after
+the install began — where the previous version blocked twice — connected with
+all 22 tools, and the cache file was still `{}` at the end. The mechanism was not
+avoided; it was left without a cause. What that run does **not** establish is
+that a skill stops on the new signal specifically: the tools were absent in both
+designs, which is what the guard reads, and the empty server's own instructions
+repeat the remedy. It stops because the tools are missing, which was never in
+doubt.
+
 Two things about that cache, if it ever has to be diagnosed. **Its entry outlives
 both the expiry and a successful reconnection** — seen still present, unchanged,
 after the server had connected again with all its tools — and it was gone later
